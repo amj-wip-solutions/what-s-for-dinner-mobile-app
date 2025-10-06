@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FlatList } from 'react-native'
-import { Link } from 'expo-router'
+import { Link, useFocusEffect } from 'expo-router'
+import { useCallback } from 'react'
 import {
   YStack,
   XStack,
@@ -68,24 +69,37 @@ export default function RecipesScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Load recipes on component mount
+  // Load recipes on component mount and when screen comes into focus
   useEffect(() => {
+    console.log('RecipesScreen: useEffect triggered')
     loadRecipes()
   }, [])
 
+  // Also refresh when screen comes into focus (e.g., after adding a recipe)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('RecipesScreen: Focus effect triggered')
+      loadRecipes()
+    }, [])
+  )
+
   const loadRecipes = async () => {
+    console.log('RecipesScreen: Starting loadRecipes...')
     setIsLoading(true)
     try {
       console.log('Loading recipes from API...')
       const recipesData = await getRecipes()
-      setRecipes(recipesData)
-      console.log('Loaded recipes:', recipesData)
+      console.log('API response received:', recipesData)
+      setRecipes(recipesData || [])
+      console.log('Recipes state updated:', recipesData?.length || 0, 'recipes')
     } catch (error) {
       console.error('Error loading recipes:', error)
+      console.error('Error details:', error.message, error.response?.data)
       // Fall back to empty array on error
       setRecipes([])
     } finally {
       setIsLoading(false)
+      console.log('RecipesScreen: loadRecipes completed')
     }
   }
 
