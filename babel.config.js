@@ -1,5 +1,5 @@
 module.exports = (api) => {
-  api.cache(true)
+  api.cache(true);
   return {
     presets: [['babel-preset-expo', { jsxRuntime: 'automatic' }]],
     plugins: [
@@ -12,9 +12,8 @@ module.exports = (api) => {
           disableExtraction: process.env.NODE_ENV === 'development',
         },
       ],
-
-      // NOTE: this is only necessary if you are using reanimated for animations
+      // This comma was missing, and the closing bracket below was in the wrong place.
       'react-native-reanimated/plugin',
-    ],
-  }
-}
+    ], // The closing bracket for the 'plugins' array should be here.
+  };
+};

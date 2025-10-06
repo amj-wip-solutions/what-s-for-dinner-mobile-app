@@ -8,6 +8,9 @@ import { useFonts } from 'expo-font'
 import { SplashScreen, Stack } from 'expo-router'
 import { Provider } from 'components/Provider'
 import { useTheme } from 'tamagui'
+import { AuthProvider, useAuth } from '../contexts/AuthContext'
+import AuthScreen from './auth'
+import { YStack, Spinner, Paragraph } from 'tamagui'
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -47,12 +50,36 @@ export default function RootLayout() {
 }
 
 const Providers = ({ children }: { children: React.ReactNode }) => {
-  return <Provider>{children}</Provider>
+  return (
+    <Provider>
+      <AuthProvider>
+        {children}
+      </AuthProvider>
+    </Provider>
+  )
 }
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme()
   const theme = useTheme()
+  const { user, loading } = useAuth()
+
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <YStack f={1} justifyContent="center" alignItems="center" bg="$background">
+        <Spinner size="large" color="$blue10" />
+        <Paragraph mt="$4" theme="alt2">Loading...</Paragraph>
+      </YStack>
+    )
+  }
+
+  // Show auth screen if user is not logged in
+  if (!user) {
+    return <AuthScreen />
+  }
+
+  // Show main app if user is authenticated
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
@@ -61,6 +88,15 @@ function RootLayoutNav() {
           name="(tabs)"
           options={{
             headerShown: false,
+          }}
+        />
+
+        <Stack.Screen
+          name="add-recipe"
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
           }}
         />
 
