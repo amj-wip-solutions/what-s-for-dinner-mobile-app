@@ -16,8 +16,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : null
 
 console.log('Supabase client created:', supabase ? 'Success' : 'Failed')
 
@@ -33,45 +33,45 @@ const apiClient = axios.create({
 
 // Request interceptor to add authentication token
 apiClient.interceptors.request.use(
-  async (config) => {
-    if (supabase) {
-      try {
-        // Get the current session from Supabase
-        const { data } = await supabase.auth.getSession()
+    async (config) => {
+      if (supabase) {
+        try {
+          // Get the current session from Supabase
+          const { data } = await supabase.auth.getSession()
 
-        if (data.session?.access_token) {
-          // If a token exists, add it to the Authorization header
-          config.headers['Authorization'] = `Bearer ${data.session.access_token}`
+          if (data.session?.access_token) {
+            // If a token exists, add it to the Authorization header
+            config.headers['Authorization'] = `Bearer ${data.session.access_token}`
+          }
+        } catch (error) {
+          console.warn('Failed to get Supabase session:', error)
         }
-      } catch (error) {
-        console.warn('Failed to get Supabase session:', error)
       }
+      return config
+    },
+    (error) => {
+      return Promise.reject(error)
     }
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  }
 )
 
 // Response interceptor for better error handling
 apiClient.interceptors.response.use(
-  (response) => {
-    return response
-  },
-  (error) => {
-    if (error.response) {
-      // Server responded with error status
-      console.error('API Error:', error.response.status, error.response.data)
-    } else if (error.request) {
-      // Request was made but no response received
-      console.error('Network Error:', error.request)
-    } else {
-      // Something else happened
-      console.error('Error:', error.message)
+    (response) => {
+      return response
+    },
+    (error) => {
+      if (error.response) {
+        // Server responded with error status
+        console.error('API Error:', error.response.status, error.response.data)
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error('Network Error:', error.request)
+      } else {
+        // Something else happened
+        console.error('Error:', error.message)
+      }
+      return Promise.reject(error)
     }
-    return Promise.reject(error)
-  }
 )
 
 export default apiClient
