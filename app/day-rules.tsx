@@ -1,27 +1,11 @@
 import { useState, useEffect } from 'react'
-import { YStack, XStack, Button, H3, H4, Paragraph, Select, Adapt, Sheet, Spinner, ScrollView } from 'tamagui'
-import { ChevronDown, Check, Save, ArrowLeft } from '@tamagui/lucide-icons'
+
+import { YStack, XStack, Button, H4, Paragraph, Sheet, Spinner, ScrollView } from 'tamagui'
+import { ChevronDown, Save } from '@tamagui/lucide-icons'
 import { useRouter } from 'expo-router'
 import { Alert } from 'react-native'
-
-// Mock services for demonstration purposes
-const tagService = {
-    getAll: async () => ([
-        { id: 1, name: 'Vegetarian' },
-        { id: 2, name: 'Quick Meal' },
-        { id: 3, name: 'High Protein' },
-    ])
-};
-
-const dayRuleService = {
-    getAll: async () => ([
-        { dayOfWeek: 1, tagId: 1 },
-        { dayOfWeek: 5, tagId: 2 },
-    ]),
-    deleteBydayOfWeek: async (day) => console.log(`Deleted rule for day ${day}`),
-    upsertSingleDay: async (day, tagId) => console.log(`Upserted rule for day ${day} with tag ${tagId}`),
-};
-// End of Mock services
+import { tagService, Tag } from '../services/tagService'
+import { dayRuleService } from '../services/dayRuleService'
 
 const DAYS = [
     { value: 1, label: 'Monday' },
@@ -32,11 +16,6 @@ const DAYS = [
     { value: 6, label: 'Saturday' },
     { value: 7, label: 'Sunday' }
 ]
-
-interface Tag {
-    id: number;
-    name: string;
-}
 
 interface DayRuleState {
     dayOfWeek: number
@@ -49,6 +28,7 @@ export default function DayRulesScreen() {
     const [rules, setRules] = useState<DayRuleState[]>([])
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [openSheets, setOpenSheets] = useState<Record<number, boolean>>({})
 
     useEffect(() => {
         loadData()
@@ -133,74 +113,74 @@ export default function DayRulesScreen() {
         }
     }
 
+    const toggleSheet = (dayValue: number, isOpen: boolean) => {
+        setOpenSheets(prev => ({
+            ...prev,
+            [dayValue]: isOpen
+        }))
+    }
+
     const renderDayRule = (day: typeof DAYS[0]) => {
         const rule = rules.find(r => r.dayOfWeek === day.value)
+
+        const selectedTag = rule?.tagId ? tags.find(t => t.id === rule.tagId) : null
+        const displayValue = selectedTag ? selectedTag.name : "No rule"
 
         return (
             <XStack key={day.value} ai="center" jc="space-between" py="$2">
                 <Paragraph width={80}>{day.label}</Paragraph>
-                <Select
-                    value={rule?.tagId?.toString() || ''}
-                    onValueChange={(value) => updateRule(day.value, value ? parseInt(value) : null)}
+
+                <Button
+                    width={200}
+                    variant="outlined"
+                    iconAfter={ChevronDown}
+                    onPress={() => toggleSheet(day.value, true)}
+                    jc="space-between"
                 >
-                    <Select.Trigger
-                        width={200}
-                        iconAfter={ChevronDown}
-                        pressStyle={{ bg: '$gray5' }}
-                        focusStyle={{ borderColor: '$blue8' }}
-                    >
-                        <Select.Value placeholder="No rule" />
-                    </Select.Trigger>
+                    {displayValue}
+                </Button>
 
-                    {/* FIX: Removed platform="touch" to make the sheet appear on all small screens */}
-                    <Adapt when="sm">
-                        <Sheet
-                            modal
-                            dismissOnSnapToBottom
-                            snapPointsMode="fit"
-                        >
-                            <Sheet.Frame padding="$4" gap="$4">
-                                <Sheet.ScrollView showsVerticalScrollIndicator={false}>
-                                    <Adapt.Contents />
-                                </Sheet.ScrollView>
-                            </Sheet.Frame>
-                            <Sheet.Overlay
-                                animation="lazy"
-                                enterStyle={{ opacity: 0 }}
-                                exitStyle={{ opacity: 0 }}
-                            />
-                        </Sheet>
-                    </Adapt>
-
-                    <Select.Content zIndex={200000}>
-                        <Select.Viewport minHeight={200}>
-                            <Select.Group>
-                                <Select.Item
-                                    index={0}
-                                    value="" // Represents the 'null' or 'no rule' state
+                <Sheet
+                    modal
+                    open={openSheets[day.value]}
+                    onOpenChange={(open) => toggleSheet(day.value, open)}
+                    dismissOnSnapToBottom
+                    snapPointsMode="fit"
+                >
+                    <Sheet.Frame p="$4" gap="$4">
+                        <YStack gap="$2">
+                            <H4 mb="$2">Select rule for {day.label}</H4>
+                            <Button
+                                variant={rule?.tagId === null ? "outlined" : "ghost"}
+                                onPress={() => {
+                                    updateRule(day.value, null)
+                                    toggleSheet(day.value, false)
+                                }}
+                                jc="flex-start"
+                            >
+                                No rule
+                            </Button>
+                            {tags.map((tag) => (
+                                <Button
+                                    key={tag.id}
+                                    variant={rule?.tagId === tag.id ? "outlined" : "ghost"}
+                                    onPress={() => {
+                                        updateRule(day.value, tag.id)
+                                        toggleSheet(day.value, false)
+                                    }}
+                                    jc="flex-start"
                                 >
-                                    <Select.ItemText>No rule</Select.ItemText>
-                                    <Select.ItemIndicator marginLeft="auto">
-                                        <Check size={16} />
-                                    </Select.ItemIndicator>
-                                </Select.Item>
-
-                                {tags.map((tag, i) => (
-                                    <Select.Item
-                                        index={i + 1}
-                                        key={tag.id}
-                                        value={tag.id.toString()}
-                                    >
-                                        <Select.ItemText>{tag.name}</Select.ItemText>
-                                        <Select.ItemIndicator marginLeft="auto">
-                                            <Check size={16} />
-                                        </Select.ItemIndicator>
-                                    </Select.Item>
-                                ))}
-                            </Select.Group>
-                        </Select.Viewport>
-                    </Select.Content>
-                </Select>
+                                    {tag.name}
+                                </Button>
+                            ))}
+                        </YStack>
+                    </Sheet.Frame>
+                    <Sheet.Overlay
+                        animation="lazy"
+                        enterStyle={{ opacity: 0 }}
+                        exitStyle={{ opacity: 0 }}
+                    />
+                </Sheet>
             </XStack>
         )
     }
@@ -265,4 +245,3 @@ export default function DayRulesScreen() {
         </YStack>
     )
 }
-

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { YStack, XStack, Button, H3, Paragraph, Input, Sheet, Separator, Spinner } from 'tamagui'
+import { YStack, XStack, Button, H3, Paragraph, Input, Sheet, Separator, Spinner, ScrollView } from 'tamagui'
 import { Plus, Edit3, Trash2, ArrowLeft, Save, X } from '@tamagui/lucide-icons'
 import { useRouter } from 'expo-router'
 import { Alert } from 'react-native'
@@ -232,52 +232,54 @@ export default function ManageTagsScreen() {
       </Button>
 
       {/* Tags List */}
-      {tags.length === 0 ? (
-        <YStack f={1} ai="center" jc="center" gap="$3">
-          <Paragraph size="$6" col="$gray11">No tags yet</Paragraph>
-          <Paragraph col="$gray11" ta="center">
-            Create your first tag to start organizing your recipes
-          </Paragraph>
-        </YStack>
-      ) : (
-        <YStack f={1} gap="$2">
-          {tags.map((tag, index) => (
-            <YStack key={tag.id}>
-              <XStack
-                ai="center"
-                jc="space-between"
-                p="$3"
-                bg="$gray3"
-                br="$4"
-              >
-                <YStack f={1}>
-                  <Paragraph fontWeight="600">{tag.name}</Paragraph>
-                  {tag.description && (
-                    <Paragraph size="$3" col="$gray11">{tag.description}</Paragraph>
-                  )}
-                </YStack>
+      <ScrollView>
+        {tags.length === 0 ? (
+          <YStack f={1} ai="center" jc="center" gap="$3">
+            <Paragraph size="$6" col="$gray11">No tags yet</Paragraph>
+            <Paragraph col="$gray11" ta="center">
+              Create your first tag to start organizing your recipes
+            </Paragraph>
+          </YStack>
+        ) : (
+          <YStack f={1} gap="$2">
+            {tags.map((tag, index) => (
+              <YStack key={tag.id}>
+                <XStack
+                  ai="center"
+                  jc="space-between"
+                  p="$3"
+                  bg="$gray3"
+                  br="$4"
+                >
+                  <YStack f={1}>
+                    <Paragraph fontWeight="600">{tag.name}</Paragraph>
+                    {tag.description && (
+                      <Paragraph size="$3" col="$gray11">{tag.description}</Paragraph>
+                    )}
+                  </YStack>
 
-                <XStack gap="$2">
-                  <Button
-                    size="$3"
-                    variant="outlined"
-                    icon={Edit3}
-                    onPress={() => openEditModal(tag)}
-                  />
-                  <Button
-                    size="$3"
-                    variant="outlined"
-                    borderColor="$red8"
-                    icon={Trash2}
-                    onPress={() => handleDeleteTag(tag)}
-                  />
+                  <XStack gap="$2">
+                    <Button
+                      size="$3"
+                      variant="outlined"
+                      icon={Edit3}
+                      onPress={() => openEditModal(tag)}
+                    />
+                    <Button
+                      size="$3"
+                      variant="outlined"
+                      borderColor="$red8"
+                      icon={Trash2}
+                      onPress={() => handleDeleteTag(tag)}
+                    />
+                  </XStack>
                 </XStack>
-              </XStack>
-              {index < tags.length - 1 && <Separator />}
-            </YStack>
-          ))}
-        </YStack>
-      )}
+                {index < tags.length - 1 && <Separator />}
+              </YStack>
+            ))}
+          </YStack>
+        )}
+      </ScrollView>
 
       {renderTagModal()}
     </YStack>

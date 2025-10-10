@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { FlatList } from 'react-native'
-import { Link, useFocusEffect } from 'expo-router'
+import { Link, useFocusEffect, router } from 'expo-router'
 import { useCallback } from 'react'
 import {
   YStack,
@@ -12,12 +12,13 @@ import {
   Paragraph,
   Image,
   ScrollView,
-  Separator
+  Separator,
+  Text
 } from 'tamagui'
-import { Search, Filter, Plus } from '@tamagui/lucide-icons'
+import { Search, Filter, Plus, Edit, Tag as TagIcon } from '@tamagui/lucide-icons'
 import { getRecipes } from '../../services/recipeService'
 
-const RecipeCard = ({ recipe, onPress }) => (
+const RecipeCard = ({ recipe, onPress, onEdit }) => (
   <Card
     elevate
     size="$4"
@@ -39,25 +40,48 @@ const RecipeCard = ({ recipe, onPress }) => (
           mb="$2"
         />
       )}
-      <H4>{recipe.name}</H4>
+
+      <XStack alignItems="center" justifyContent="space-between" mb="$2">
+        <H4 flex={1}>{recipe.name}</H4>
+        <Button
+          size="$2"
+          variant="ghost"
+          icon={Edit}
+          onPress={(e) => {
+            e.stopPropagation()
+            onEdit(recipe)
+          }}
+          circular
+        />
+      </XStack>
+
       {recipe.description && (
-        <Paragraph theme="alt2" size="$3">
+        <Paragraph theme="alt2" size="$3" mb="$2">
           {recipe.description}
         </Paragraph>
       )}
-      <XStack gap="$2" mt="$2" flexWrap="wrap">
-        {recipe.tags?.map((tag, index) => (
-          <Button
-            key={index}
-            size="$2"
-            variant="outlined"
-            chromeless
-            disabled
-          >
-            {tag}
-          </Button>
-        ))}
-      </XStack>
+
+      {/* Display Tags */}
+      {recipe.tags && recipe.tags.length > 0 && (
+        <XStack gap="$2" mt="$2" flexWrap="wrap">
+          {recipe.tags.map((tag, index) => (
+            <XStack
+              key={index}
+              backgroundColor="$blue3"
+              paddingHorizontal="$2"
+              paddingVertical="$1"
+              borderRadius="$2"
+              alignItems="center"
+              gap="$1"
+            >
+              <TagIcon size={12} color="$blue10" />
+              <Text fontSize="$2" color="$blue10">
+                {typeof tag === 'string' ? tag : tag.name}
+              </Text>
+            </XStack>
+          ))}
+        </XStack>
+      )}
     </Card.Header>
   </Card>
 )
@@ -106,11 +130,18 @@ export default function RecipesScreen() {
   const handleRecipePress = (recipe) => {
     // Navigate to recipe detail view
     console.log('Recipe pressed:', recipe.name)
+    router.push(`/recipe-detail/${recipe.id}`)
   }
 
   const handleAddRecipe = () => {
     // Navigate to add recipe screen
     console.log('Add recipe pressed')
+  }
+
+  const handleEditRecipe = (recipe) => {
+    // Navigate to edit recipe screen
+    console.log('Edit recipe pressed:', recipe.name)
+    router.push(`/edit-recipe/${recipe.id}`)
   }
 
   const filteredRecipes = recipes.filter(recipe =>
@@ -156,6 +187,7 @@ export default function RecipesScreen() {
                 key={recipe.id}
                 recipe={recipe}
                 onPress={handleRecipePress}
+                onEdit={handleEditRecipe}
               />
             ))
           ) : (

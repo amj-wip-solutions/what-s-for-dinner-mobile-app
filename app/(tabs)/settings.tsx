@@ -41,6 +41,18 @@ export default function SettingsScreen() {
       // Close the select after successful update
       if (key === 'plannerDuration') {
         setSelectOpen(false)
+        // Show warning about recreating meal planner
+        Alert.alert(
+          'Settings Updated',
+          'Your plan duration has been updated. To apply the new settings, please recreate your meal planner from the main screen.',
+          [{ text: 'OK' }]
+        )
+      } else if (key === 'autoCreatePlans') {
+        Alert.alert(
+          'Settings Updated',
+          'Your auto-create plans setting has been updated successfully.',
+          [{ text: 'OK' }]
+        )
       }
     } catch (error) {
       console.error('Error updating settings:', error)

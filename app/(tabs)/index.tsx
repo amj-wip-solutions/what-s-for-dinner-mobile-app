@@ -8,11 +8,14 @@ import {
   Button,
   Card,
   Image,
-  Text
+  Text,
+  Spinner
 } from 'tamagui'
-import { RefreshCw, Plus, Tag as TagIcon } from '@tamagui/lucide-icons'
+import { RefreshCw, Plus, Tag as TagIcon, RotateCcw } from '@tamagui/lucide-icons'
 import { settingsService, UserSettings } from '../../services/settingsService'
 import { tagService, Tag } from '../../services/tagService'
+import { getRecipes } from '../../services/recipeService'
+import { dayRuleService } from '../../services/dayRuleService'
 
 const DayItem = ({ item, onSwap }) => {
   const formatDate = (dateString) => {
@@ -112,6 +115,7 @@ export default function MealPlanScreen() {
   const [activeMealPlan, setActiveMealPlan] = useState(null)
   const [mealPlanItems, setMealPlanItems] = useState([])
   const [isLoading, setIsLoading] = useState(false)
+  const [swappingItemId, setSwappingItemId] = useState<number | null>(null)
 
   // Helper function to get the start of the current week (Monday)
   const getCurrentWeekStart = () => {
@@ -181,13 +185,16 @@ export default function MealPlanScreen() {
       }
 
       // Generate empty meal plan items with proper dates
-      const updatedMealPlanItems = planDates.map((dateInfo, index) => ({
+      let updatedMealPlanItems = planDates.map((dateInfo, index) => ({
         id: index + 1,
         date: dateInfo.date,
         dayOfWeek: dateInfo.dayOfWeek,
         recipe: null, // No recipe assigned initially
-        tags: [] // Empty tags array, can be populated from API later
+        tags: [] // Empty tags array, will be populated with day rules
       }))
+
+      // Load day rules and associate tags with meal plan items
+      updatedMealPlanItems = await loadDayRulesAndTags(updatedMealPlanItems)
 
       setActiveMealPlan(updatedMealPlan)
       setMealPlanItems(updatedMealPlanItems)
@@ -201,9 +208,95 @@ export default function MealPlanScreen() {
     }
   }
 
-  const handleSwapRecipe = (item) => {
-    // Logic to swap recipe for the day
-    console.log('Swap recipe for:', item)
+  const handleSwapRecipe = async (item) => {
+    setSwappingItemId(item.id)
+
+    try {
+      // Fetch all available recipes
+      const allRecipes = await getRecipes()
+
+      if (allRecipes.length === 0) {
+        Alert.alert('No Recipes', 'Please add some recipes first to use this feature.')
+        setSwappingItemId(null)
+        return
+      }
+
+      // Filter recipes based on day rules and recipe tags
+      const compatibleRecipes = filterRecipesByDayTags(allRecipes, item)
+
+      if (compatibleRecipes.length === 0) {
+        const dayTagNames = item.tags?.map(tag => tag.name).join(', ') || 'no tags'
+        Alert.alert(
+          'No Compatible Recipes',
+          `No recipes found that match this day's requirements (${dayTagNames}). Try adding more recipes or adjusting your day rules.`
+        )
+        setSwappingItemId(null)
+        return
+      }
+
+      // Filter out the current recipe to avoid assigning the same one
+      const availableRecipes = compatibleRecipes.filter(recipe =>
+        recipe.id !== item.recipe?.id
+      )
+
+      // If all compatible recipes are the same or only one recipe exists, use all compatible recipes
+      const recipesToChooseFrom = availableRecipes.length > 0 ? availableRecipes : compatibleRecipes
+
+      // Select a random recipe from compatible ones
+      const randomRecipe = recipesToChooseFrom[Math.floor(Math.random() * recipesToChooseFrom.length)]
+
+      // Update the meal plan item with the new recipe
+      setMealPlanItems((prevItems) =>
+        prevItems.map((mealItem) => {
+          if (mealItem.id === item.id) {
+            return {
+              ...mealItem,
+              recipe: randomRecipe
+            }
+          }
+          return mealItem
+        })
+      )
+
+      console.log(`Swapped recipe for ${item.dayOfWeek} to: ${randomRecipe.name}`)
+      console.log(`Day tags: ${item.tags?.map(t => t.name).join(', ') || 'none'}`)
+      console.log(`Recipe tags: ${randomRecipe.tagIds?.length || 0} tags`)
+
+    } catch (error) {
+      console.error('Error swapping recipe:', error)
+      Alert.alert('Error', 'Failed to load recipes. Please try again.')
+    } finally {
+      // Reset swapping state after a short delay
+      setTimeout(() => {
+        setSwappingItemId(null)
+      }, 300)
+    }
+  }
+
+  // Helper function to filter recipes based on day rules and recipe tags
+  const filterRecipesByDayTags = (allRecipes, dayItem) => {
+    const dayTags = dayItem.tags || []
+    const dayTagIds = dayTags.map(tag => tag.id)
+
+    return allRecipes.filter(recipe => {
+      const recipeTagIds = recipe.tagIds || []
+
+      // Rule 1: If day has tag rules, only recipes with matching tags
+      if (dayTagIds.length > 0) {
+        // Recipe must have at least one matching tag
+        const hasMatchingTag = recipeTagIds.some(recipeTagId =>
+          dayTagIds.includes(recipeTagId)
+        )
+        return hasMatchingTag
+      }
+
+      // Rule 2: If day has no tag rules, accept any recipe
+      if (dayTagIds.length === 0) {
+        return true
+      }
+
+      return false
+    })
   }
 
   const handleGenerateNewPlan = async () => {
@@ -213,7 +306,7 @@ export default function MealPlanScreen() {
     const planType = userSettings.plannerDuration === 7 ? '7-day' : '14-day'
     Alert.alert(
       'Generate New Meal Plan',
-      `This will create a new ${planType} meal plan. Continue?`,
+      `This will create a new ${planType} meal plan with automatic recipe assignments based on your day rules. Continue?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -236,19 +329,25 @@ export default function MealPlanScreen() {
                 isActive: true
               }
 
-              // Generate empty meal plan items with proper dates
-              const updatedMealPlanItems = planDates.map((dateInfo, index) => ({
+              // Generate meal plan items with proper dates and day rules
+              let updatedMealPlanItems = planDates.map((dateInfo, index) => ({
                 id: index + 1,
                 date: dateInfo.date,
                 dayOfWeek: dateInfo.dayOfWeek,
                 recipe: null, // No recipe assigned initially
-                tags: [] // Empty tags array, can be populated from API later
+                tags: [] // Empty tags array, will be populated with day rules
               }))
+
+              // Load day rules and associate tags with meal plan items
+              updatedMealPlanItems = await loadDayRulesAndTags(updatedMealPlanItems)
+
+              // Auto-assign compatible recipes to each day
+              updatedMealPlanItems = await autoAssignRecipes(updatedMealPlanItems)
 
               setActiveMealPlan(updatedMealPlan)
               setMealPlanItems(updatedMealPlanItems)
 
-              Alert.alert('Success', `New ${planType} meal plan generated!`)
+              Alert.alert('Success', `New ${planType} meal plan generated with smart recipe assignments!`)
             } catch (error) {
               console.error('Error generating new meal plan:', error)
               Alert.alert('Error', 'Failed to generate new meal plan')
@@ -259,6 +358,152 @@ export default function MealPlanScreen() {
         }
       ]
     )
+  }
+
+  // Helper function to automatically assign compatible recipes to meal plan days
+  const autoAssignRecipes = async (mealPlanItems: any[]) => {
+    try {
+      // Fetch all available recipes
+      const allRecipes = await getRecipes()
+
+      if (allRecipes.length === 0) {
+        console.log('No recipes available for auto-assignment')
+        return mealPlanItems
+      }
+
+      const itemsWithRecipes = mealPlanItems.map(item => {
+        // Find compatible recipes for this day
+        const compatibleRecipes = filterRecipesByDayTags(allRecipes, item)
+
+        if (compatibleRecipes.length > 0) {
+          // Randomly select a compatible recipe
+          const randomRecipe = compatibleRecipes[Math.floor(Math.random() * compatibleRecipes.length)]
+
+          console.log(`Auto-assigned "${randomRecipe.name}" to ${item.dayOfWeek}`)
+          console.log(`Day tags: ${item.tags?.map(t => t.name).join(', ') || 'none'}`)
+
+          return {
+            ...item,
+            recipe: randomRecipe
+          }
+        } else {
+          const dayTagNames = item.tags?.map(tag => tag.name).join(', ') || 'no tags'
+          console.log(`No compatible recipes found for ${item.dayOfWeek} (requires: ${dayTagNames})`)
+
+          return item // Keep without recipe assignment
+        }
+      })
+
+      return itemsWithRecipes
+    } catch (error) {
+      console.error('Error auto-assigning recipes:', error)
+      return mealPlanItems // Return original items if there's an error
+    }
+  }
+
+  const handleRecreateMealPlan = async () => {
+    Alert.alert(
+      'Recreate Meal Planner',
+      'This will recreate your meal planner with the latest settings and day rules, and automatically assign compatible recipes. Any existing recipes will be cleared. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Recreate',
+          onPress: async () => {
+            try {
+              setIsLoading(true)
+
+              // Fetch the latest user settings to ensure we have the most recent configuration
+              const settings = await settingsService.getSettings()
+              setUserSettings(settings)
+
+              const planDates = generateMealPlanDates(settings)
+              const planName = formatDateRange(settings)
+
+              const updatedMealPlan = {
+                id: 1,
+                name: planName,
+                startDate: planDates[0].date,
+                endDate: planDates[planDates.length - 1].date,
+                isActive: true
+              }
+
+              // Generate empty meal plan items with proper dates
+              let updatedMealPlanItems = planDates.map((dateInfo, index) => ({
+                id: index + 1,
+                date: dateInfo.date,
+                dayOfWeek: dateInfo.dayOfWeek,
+                recipe: null, // No recipe assigned initially
+                tags: [] // Empty tags array, will be populated with day rules
+              }))
+
+              // Load day rules and associate tags with meal plan items
+              updatedMealPlanItems = await loadDayRulesAndTags(updatedMealPlanItems)
+
+              // Auto-assign compatible recipes to each day
+              updatedMealPlanItems = await autoAssignRecipes(updatedMealPlanItems)
+
+              setActiveMealPlan(updatedMealPlan)
+              setMealPlanItems(updatedMealPlanItems)
+
+              const planType = settings.plannerDuration === 7 ? '7-day' : '14-day'
+              Alert.alert('Success', `Meal planner recreated with latest ${planType} settings, day rules, and smart recipe assignments!`)
+
+              console.log(`Recreated ${settings.plannerDuration}-day meal plan with latest settings:`, planName)
+            } catch (error) {
+              console.error('Error recreating meal plan:', error)
+              Alert.alert('Error', 'Failed to recreate meal planner. Please try again.')
+            } finally {
+              setIsLoading(false)
+            }
+          }
+        }
+      ]
+    )
+  }
+
+  // Helper function to get day of week number from date string
+  const getDayOfWeekNumber = (dateString: string) => {
+    const date = new Date(dateString)
+    const dayOfWeek = date.getDay() // 0 = Sunday, 1 = Monday, etc.
+    return dayOfWeek === 0 ? 7 : dayOfWeek // Convert Sunday from 0 to 7
+  }
+
+  // Load day rules and associate tags with meal plan items
+  const loadDayRulesAndTags = async (mealPlanItems: any[]) => {
+    try {
+      const [dayRules, allTags] = await Promise.all([
+        dayRuleService.getAll(),
+        tagService.getAll()
+      ])
+
+      // Map meal plan items to include their associated tags based on day rules
+      const itemsWithTags = mealPlanItems.map(item => {
+        const dayOfWeekNumber = getDayOfWeekNumber(item.date)
+
+        // Find if there's a day rule for this day of the week
+        const dayRule = dayRules.find(rule => rule.dayOfWeek === dayOfWeekNumber)
+
+        // If there's a rule, find the associated tag
+        const associatedTags = []
+        if (dayRule) {
+          const tag = allTags.find(tag => tag.id === dayRule.tagId)
+          if (tag) {
+            associatedTags.push(tag)
+          }
+        }
+
+        return {
+          ...item,
+          tags: associatedTags
+        }
+      })
+
+      return itemsWithTags
+    } catch (error) {
+      console.error('Error loading day rules and tags:', error)
+      return mealPlanItems // Return original items if there's an error
+    }
   }
 
   // Memoized render function for better performance
@@ -294,8 +539,21 @@ export default function MealPlanScreen() {
         />
       )}
 
-      {/* Floating Action Button */}
-      <YStack position="absolute" bottom="$4" right="$4">
+      {/* Floating Action Buttons */}
+      <YStack position="absolute" bottom="$4" right="$4" gap="$3">
+        {/* Recreate Meal Planner Button */}
+        <Button
+          size="$4"
+          circular
+          icon={RotateCcw}
+          backgroundColor="$blue10"
+          color="white"
+          elevate
+          onPress={handleRecreateMealPlan}
+          disabled={isLoading}
+        />
+
+        {/* Generate New Plan Button */}
         <Button
           size="$5"
           circular
