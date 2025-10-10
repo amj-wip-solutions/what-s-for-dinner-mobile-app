@@ -287,3 +287,228 @@ Design a bottom tab bar with three persistent icons and labels:
     2.  **"Manage Tags"**: Navigates to a view where the user can see a list of all their created tags. This view must support adding new tags, editing existing tag names, and deleting tags.
         * **API Calls**: `GET /api/tags`, `POST /api/tags`, `PUT /api/tags/{id}`, `DELETE /api/tags/{id}`.
     3.  **"Account"**: A simple link that performs the logout action via the Supabase client.
+
+
+## BE Schema
+
+```
+import { pgTable, serial, text, timestamp, boolean, uuid, unique, integer, date, varchar } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+
+// Users table - extends Supabase auth users
+export const users = pgTable('users', {
+    id: uuid('id').primaryKey().notNull(),
+    email: text('email').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// User relations
+export const usersRelations = relations(users, ({ many, one }) => ({
+    recipes: many(recipes),
+    mealPlans: many(mealPlans),
+    tags: many(tags),
+    dayRules: many(dayRules), // Added relation to day rules
+    settings: one(userSettings), // Added relation to user settings
+}));
+
+// ---
+
+// ⭐ NEW: User Settings - Global meal planner preferences
+export const userSettings = pgTable('user_settings', {
+    id: serial('id').primaryKey(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    plannerDuration: integer('planner_duration').notNull().default(14), // Days: 7 or 14
+    autoCreatePlans: boolean('auto_create_plans').default(true).notNull(), // Auto-create new plans when current ends
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => {
+    return {
+        // Each user can only have one settings record
+        uniqueUserSettings: unique('unique_user_settings').on(table.userId),
+    };
+});
+
+// UserSettings relations
+export const userSettingsRelations = relations(userSettings, ({ one }) => ({
+    user: one(users, {
+        fields: [userSettings.userId],
+        references: [users.id],
+    }),
+}));
+
+// ---
+
+// Recipes table
+export const recipes = pgTable('recipes', {
+    id: serial('id').primaryKey(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    url: text('url'),
+    imageUrl: text('image_url'),
+    description: text('description'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Recipe relations
+export const recipesRelations = relations(recipes, ({ one, many }) => ({
+    user: one(users, {
+        fields: [recipes.userId],
+        references: [users.id],
+    }),
+    mealPlanItems: many(mealPlanItems),
+    recipeTags: many(recipeTags),
+}));
+
+// ---
+
+// Tags table, scoped to users
+export const tags = pgTable('tags', {
+    id: serial('id').primaryKey(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 100 }).notNull(),
+    description: text('description'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => {
+    return {
+        // SUGGESTION: Ensures a user cannot have two tags with the same name.
+        uniqueUserTagName: unique('unique_user_tag_name').on(table.userId, table.name),
+    };
+});
+
+// Tags relations
+export const tagsRelations = relations(tags, ({ one, many }) => ({
+    user: one(users, {
+        fields: [tags.userId],
+        references: [users.id],
+    }),
+    recipeTags: many(recipeTags),
+    dayRules: many(dayRules),
+    mealPlanDayTags: many(mealPlanDayTags),
+}));
+
+// ---
+
+// Junction table for recipes and tags
+export const recipeTags = pgTable('recipe_tags', {
+    id: serial('id').primaryKey(),
+    recipeId: integer('recipe_id').notNull().references(() => recipes.id, { onDelete: 'cascade' }),
+    tagId: integer('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' }),
+}, (table) => {
+    return {
+        // Ensures a recipe can't have the same tag applied more than once.
+        uniqueRecipeTag: unique('unique_recipe_tag').on(table.recipeId, table.tagId),
+    };
+});
+
+// RecipeTags relations
+export const recipeTagsRelations = relations(recipeTags, ({ one }) => ({
+    recipe: one(recipes, {
+        fields: [recipeTags.recipeId],
+        references: [recipes.id],
+    }),
+    tag: one(tags, {
+        fields: [recipeTags.tagId],
+        references: [tags.id],
+    }),
+}));
+
+// ---
+
+// ⭐ NEW: Permanent rules for generating meal plans
+export const dayRules = pgTable('day_rules', {
+    id: serial('id').primaryKey(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    dayOfWeek: integer('day_of_week').notNull(), // 1=Monday, 7=Sunday
+    tagId: integer('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' }),
+}, (table) => {
+    return {
+        // A user can only have one tag rule for a specific day of the week.
+        uniqueUserDay: unique('unique_user_day').on(table.userId, table.dayOfWeek),
+    };
+});
+
+// DayRules relations
+export const dayRulesRelations = relations(dayRules, ({ one }) => ({
+    user: one(users, {
+        fields: [dayRules.userId],
+        references: [users.id],
+    }),
+    tag: one(tags, {
+        fields: [dayRules.tagId],
+        references: [tags.id],
+    }),
+}));
+
+// ---
+
+// Meal Plans table
+export const mealPlans = pgTable('meal_plans', {
+    id: serial('id').primaryKey(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    startDate: date('start_date').notNull(),
+    endDate: date('end_date').notNull(),
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// MealPlans relations
+export const mealPlansRelations = relations(mealPlans, ({ one, many }) => ({
+    user: one(users, {
+        fields: [mealPlans.userId],
+        references: [users.id],
+    }),
+    mealPlanItems: many(mealPlanItems),
+}));
+
+// ---
+
+// Meal Plan Items - individual dinner assignments
+export const mealPlanItems = pgTable('meal_plan_items', {
+    id: serial('id').primaryKey(),
+    mealPlanId: integer('meal_plan_id').notNull().references(() => mealPlans.id, { onDelete: 'cascade' }),
+    date: date('date').notNull(),
+    // SUGGESTION: Changed from 'restrict' to 'cascade' for better UX.
+    recipeId: integer('recipe_id').notNull().references(() => recipes.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// MealPlanItems relations
+export const mealPlanItemsRelations = relations(mealPlanItems, ({ one, many }) => ({
+    mealPlan: one(mealPlans, {
+        fields: [mealPlanItems.mealPlanId],
+        references: [mealPlans.id],
+    }),
+    recipe: one(recipes, {
+        fields: [mealPlanItems.recipeId],
+        references: [recipes.id],
+    }),
+    mealPlanDayTags: many(mealPlanDayTags),
+}));
+
+// ---
+
+// Meal Plan Day Tags - tags assigned to specific days in a meal plan (e.g., "Leftovers")
+export const mealPlanDayTags = pgTable('meal_plan_day_tags', {
+    id: serial('id').primaryKey(),
+    mealPlanItemId: integer('meal_plan_item_id').notNull().references(() => mealPlanItems.id, { onDelete: 'cascade' }),
+    tagId: integer('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// MealPlanDayTags relations
+export const mealPlanDayTagsRelations = relations(mealPlanDayTags, ({ one }) => ({
+    mealPlanItem: one(mealPlanItems, {
+        fields: [mealPlanDayTags.mealPlanItemId],
+        references: [mealPlanItems.id],
+    }),
+    tag: one(tags, {
+        fields: [mealPlanDayTags.tagId],
+        references: [tags.id],
+    }),
+}));
+```

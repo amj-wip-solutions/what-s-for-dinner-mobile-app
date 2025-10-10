@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Alert } from 'react-native'
+import { useState, useEffect, useCallback } from 'react'
+import { Alert, FlatList } from 'react-native'
 import {
   YStack,
   XStack,
@@ -8,71 +8,11 @@ import {
   Button,
   Card,
   Image,
-  ScrollView,
-  Separator,
-  Select,
-  Adapt,
-  Sheet
+  Text
 } from 'tamagui'
-import { Calendar, RefreshCw, Plus, ChevronDown, Check } from '@tamagui/lucide-icons'
-
-// Mock data for testing - replace with API calls later
-const mockMealPlan = {
-  id: 1,
-  name: "October 6 - October 19",
-  startDate: "2024-10-06",
-  endDate: "2024-10-19",
-  isActive: true
-}
-
-const mockMealPlanItems = [
-  {
-    id: 1,
-    date: "2024-10-06",
-    dayOfWeek: "Sunday",
-    recipe: {
-      id: 1,
-      name: "Spaghetti Carbonara",
-      imageUrl: null
-    }
-  },
-  {
-    id: 2,
-    date: "2024-10-07",
-    dayOfWeek: "Monday",
-    recipe: {
-      id: 2,
-      name: "Chicken Stir Fry",
-      imageUrl: null
-    }
-  },
-  {
-    id: 3,
-    date: "2024-10-08",
-    dayOfWeek: "Tuesday",
-    recipe: {
-      id: 3,
-      name: "Beef Tacos",
-      imageUrl: null
-    }
-  },
-  // Add more days...
-  ...Array.from({ length: 11 }, (_, i) => ({
-    id: i + 4,
-    date: new Date(2024, 9, 9 + i).toISOString().split('T')[0],
-    dayOfWeek: ['Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i],
-    recipe: {
-      id: (i % 3) + 1,
-      name: ['Spaghetti Carbonara', 'Chicken Stir Fry', 'Beef Tacos'][i % 3],
-      imageUrl: null
-    }
-  }))
-]
-
-const mockAvailablePlans = [
-  { id: 1, name: "October 6 - October 19", isActive: true },
-  { id: 2, name: "September 22 - October 5", isActive: false },
-]
+import { RefreshCw, Plus, Tag as TagIcon } from '@tamagui/lucide-icons'
+import { settingsService, UserSettings } from '../../services/settingsService'
+import { tagService, Tag } from '../../services/tagService'
 
 const DayItem = ({ item, onSwap }) => {
   const formatDate = (dateString) => {
@@ -84,14 +24,36 @@ const DayItem = ({ item, onSwap }) => {
     })
   }
 
+  const renderTags = () => {
+    if (!item.tags || item.tags.length === 0) return null
+
+    return (
+      <XStack gap="$2" mt="$2" flexWrap="wrap">
+        {item.tags.map((tag) => (
+          <XStack
+            key={tag.id}
+            backgroundColor="$blue3"
+            paddingHorizontal="$2"
+            paddingVertical="$1"
+            borderRadius="$2"
+            alignItems="center"
+            gap="$1"
+          >
+            <TagIcon size={12} color="$blue10" />
+            <Text fontSize="$2" color="$blue10">
+              {tag.name}
+            </Text>
+          </XStack>
+        ))}
+      </XStack>
+    )
+  }
+
   return (
     <Card
       elevate
       size="$4"
       bordered
-      animation="bouncy"
-      hoverStyle={{ scale: 0.98 }}
-      pressStyle={{ scale: 0.95 }}
       mb="$2"
       mx="$2"
     >
@@ -99,7 +61,7 @@ const DayItem = ({ item, onSwap }) => {
         <XStack alignItems="center" justifyContent="space-between">
           <YStack f={1}>
             <XStack alignItems="center" gap="$3">
-              {item.recipe.imageUrl ? (
+              {item.recipe?.imageUrl ? (
                 <Image
                   source={{ uri: item.recipe.imageUrl }}
                   width={50}
@@ -115,7 +77,9 @@ const DayItem = ({ item, onSwap }) => {
                   alignItems="center"
                   justifyContent="center"
                 >
-                  <Calendar size={20} color="$gray10" />
+                  <Text fontSize="$2" color="$gray10" textAlign="center">
+                    No Recipe
+                  </Text>
                 </YStack>
               )}
               <YStack f={1}>
@@ -123,8 +87,9 @@ const DayItem = ({ item, onSwap }) => {
                   {formatDate(item.date)}
                 </Paragraph>
                 <Paragraph theme="alt2" size="$3">
-                  {item.recipe.name}
+                  {item.recipe?.name || 'No recipe assigned'}
                 </Paragraph>
+                {renderTags()}
               </YStack>
             </XStack>
           </YStack>
@@ -143,80 +108,150 @@ const DayItem = ({ item, onSwap }) => {
 }
 
 export default function MealPlanScreen() {
-  const [activeMealPlan, setActiveMealPlan] = useState(mockMealPlan)
-  const [mealPlanItems, setMealPlanItems] = useState(mockMealPlanItems)
-  const [availablePlans, setAvailablePlans] = useState(mockAvailablePlans)
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null)
+  const [activeMealPlan, setActiveMealPlan] = useState(null)
+  const [mealPlanItems, setMealPlanItems] = useState([])
   const [isLoading, setIsLoading] = useState(false)
-  const [selectedPlanId, setSelectedPlanId] = useState(mockMealPlan.id)
 
-  // Load meal plan data on component mount
+  // Helper function to get the start of the current week (Monday)
+  const getCurrentWeekStart = () => {
+    const today = new Date()
+    const currentDay = today.getDay() // 0 = Sunday, 1 = Monday, etc.
+    const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay // If Sunday, go back 6 days to Monday
+    const monday = new Date(today)
+    monday.setDate(today.getDate() + mondayOffset)
+    monday.setHours(0, 0, 0, 0)
+    return monday
+  }
+
+  // Helper function to generate meal plan dates based on settings
+  const generateMealPlanDates = (settings: UserSettings) => {
+    const startDate = getCurrentWeekStart()
+    const dates = []
+    const daysToGenerate = settings.plannerDuration
+
+    for (let i = 0; i < daysToGenerate; i++) {
+      const date = new Date(startDate)
+      date.setDate(startDate.getDate() + i)
+      dates.push({
+        date: date.toISOString().split('T')[0],
+        dayOfWeek: date.toLocaleDateString('en-US', { weekday: 'long' })
+      })
+    }
+
+    return dates
+  }
+
+  // Helper function to format date range for meal plan name
+  const formatDateRange = (settings: UserSettings) => {
+    const startDate = getCurrentWeekStart()
+    const endDate = new Date(startDate)
+    endDate.setDate(startDate.getDate() + settings.plannerDuration - 1)
+
+    const formatOptions: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
+    const startFormatted = startDate.toLocaleDateString('en-US', formatOptions)
+    const endFormatted = endDate.toLocaleDateString('en-US', formatOptions)
+
+    return `${startFormatted} - ${endFormatted}`
+  }
+
+  // Load user settings and meal plan data on component mount
   useEffect(() => {
-    loadMealPlan()
+    loadUserData()
   }, [])
 
-  const loadMealPlan = async () => {
+  const loadUserData = async () => {
     setIsLoading(true)
     try {
-      // TODO: Replace with actual API calls
-      console.log('Loading active meal plan...')
+      // Fetch user settings first
+      const settings = await settingsService.getSettings()
+      setUserSettings(settings)
 
-      // Simulate API calls:
-      // const mealPlanResponse = await fetch('/api/meal-plans?isActive=true')
-      // const mealPlan = await mealPlanResponse.json()
-      //
-      // const itemsResponse = await fetch(`/api/meal-plan-items?mealPlanId=${mealPlan.id}`)
-      // const items = await itemsResponse.json()
+      // Generate meal plan data based on settings
+      const planDates = generateMealPlanDates(settings)
+      const planName = formatDateRange(settings)
 
-      // For now, using mock data
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Create meal plan with proper dates
+      const updatedMealPlan = {
+        id: 1,
+        name: planName,
+        startDate: planDates[0].date,
+        endDate: planDates[planDates.length - 1].date,
+        isActive: true
+      }
 
+      // Generate empty meal plan items with proper dates
+      const updatedMealPlanItems = planDates.map((dateInfo, index) => ({
+        id: index + 1,
+        date: dateInfo.date,
+        dayOfWeek: dateInfo.dayOfWeek,
+        recipe: null, // No recipe assigned initially
+        tags: [] // Empty tags array, can be populated from API later
+      }))
+
+      setActiveMealPlan(updatedMealPlan)
+      setMealPlanItems(updatedMealPlanItems)
+
+      console.log(`Loaded ${settings.plannerDuration}-day meal plan:`, planName)
     } catch (error) {
-      console.error('Error loading meal plan:', error)
-      Alert.alert('Error', 'Failed to load meal plan')
+      console.error('Error loading user data:', error)
+      Alert.alert('Error', 'Failed to load meal plan data')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleSwapRecipe = (dayItem) => {
-    // TODO: Open "Select a Recipe" modal
-    Alert.alert(
-      'Swap Recipe',
-      `Would you like to change the recipe for ${dayItem.dayOfWeek}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Select Recipe',
-          onPress: () => {
-            console.log('Opening recipe selection modal for:', dayItem)
-            // This would open a modal with recipe selection
-          }
-        }
-      ]
-    )
+  const handleSwapRecipe = (item) => {
+    // Logic to swap recipe for the day
+    console.log('Swap recipe for:', item)
   }
 
-  const handleGenerateNewPlan = () => {
+  const handleGenerateNewPlan = async () => {
+    // Logic to generate a new meal plan
+    if (!userSettings) return
+
+    const planType = userSettings.plannerDuration === 7 ? '7-day' : '14-day'
     Alert.alert(
-      'Generate New Plan',
-      'This will create a new 14-day meal plan. Continue?',
+      'Generate New Meal Plan',
+      `This will create a new ${planType} meal plan. Continue?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Generate',
+          text: 'Continue',
           onPress: async () => {
-            setIsLoading(true)
             try {
-              // TODO: API call to generate new plan
-              console.log('Generating new meal plan...')
-              // const response = await fetch('/api/meal-plans', { method: 'POST' })
+              setIsLoading(true)
+              // Generate new meal plan data
+              const settings = await settingsService.getSettings()
+              setUserSettings(settings)
 
-              await new Promise(resolve => setTimeout(resolve, 2000))
-              Alert.alert('Success', 'New meal plan generated!')
-              loadMealPlan() // Refresh the view
+              const planDates = generateMealPlanDates(settings)
+              const planName = formatDateRange(settings)
+
+              const updatedMealPlan = {
+                id: 1,
+                name: planName,
+                startDate: planDates[0].date,
+                endDate: planDates[planDates.length - 1].date,
+                isActive: true
+              }
+
+              // Generate empty meal plan items with proper dates
+              const updatedMealPlanItems = planDates.map((dateInfo, index) => ({
+                id: index + 1,
+                date: dateInfo.date,
+                dayOfWeek: dateInfo.dayOfWeek,
+                recipe: null, // No recipe assigned initially
+                tags: [] // Empty tags array, can be populated from API later
+              }))
+
+              setActiveMealPlan(updatedMealPlan)
+              setMealPlanItems(updatedMealPlanItems)
+
+              Alert.alert('Success', `New ${planType} meal plan generated!`)
             } catch (error) {
-              console.error('Error generating plan:', error)
-              Alert.alert('Error', 'Failed to generate new plan')
+              console.error('Error generating new meal plan:', error)
+              Alert.alert('Error', 'Failed to generate new meal plan')
             } finally {
               setIsLoading(false)
             }
@@ -226,114 +261,38 @@ export default function MealPlanScreen() {
     )
   }
 
-  const handlePlanChange = (planId) => {
-    setSelectedPlanId(planId)
-    const selectedPlan = availablePlans.find(p => p.id === planId)
-    if (selectedPlan) {
-      setActiveMealPlan(selectedPlan)
-      // TODO: Load meal plan items for selected plan
-      console.log('Switching to plan:', selectedPlan.name)
-    }
-  }
+  // Memoized render function for better performance
+  const renderDayItem = useCallback(({ item }) => (
+    <DayItem
+      item={item}
+      onSwap={handleSwapRecipe}
+    />
+  ), [])
 
   return (
-    <YStack f={1} bg="$background">
-      {/* Header with Meal Plan Name and Plan Selector */}
-      <YStack p="$4" gap="$3">
-        <XStack alignItems="center" justifyContent="space-between">
-          <H3 f={1}>Meal Plan</H3>
-        </XStack>
-
-        <Select
-          value={selectedPlanId.toString()}
-          onValueChange={(value) => handlePlanChange(parseInt(value))}
-          disablePreventBodyScroll
-        >
-          <Select.Trigger width="100%" iconAfter={ChevronDown}>
-            <Select.Value placeholder="Select meal plan" />
-          </Select.Trigger>
-
-          <Adapt when="sm" platform="touch">
-            <Sheet
-              modal
-              dismissOnSnapToBottom
-              snapPointsMode="fit"
-            >
-              <Sheet.Frame>
-                <Sheet.ScrollView>
-                  <Adapt.Contents />
-                </Sheet.ScrollView>
-              </Sheet.Frame>
-              <Sheet.Overlay />
-            </Sheet>
-          </Adapt>
-
-          <Select.Content zIndex={200000}>
-            <Select.ScrollUpButton
-              alignItems="center"
-              justifyContent="center"
-              position="relative"
-              width="100%"
-              height="$3"
-            >
-              <YStack zIndex={10}>
-                <ChevronDown size={20} />
-              </YStack>
-            </Select.ScrollUpButton>
-
-            <Select.Viewport minHeight={200}>
-              <Select.Group>
-                <Select.Label>Available Plans</Select.Label>
-                {availablePlans.map((plan, i) => (
-                  <Select.Item
-                    index={i}
-                    key={plan.id}
-                    value={plan.id.toString()}
-                  >
-                    <Select.ItemText>{plan.name}</Select.ItemText>
-                    <Select.ItemIndicator marginLeft="auto">
-                      <Check size={16} />
-                    </Select.ItemIndicator>
-                  </Select.Item>
-                ))}
-              </Select.Group>
-            </Select.Viewport>
-
-            <Select.ScrollDownButton
-              alignItems="center"
-              justifyContent="center"
-              position="relative"
-              width="100%"
-              height="$3"
-            >
-              <YStack zIndex={10}>
-                <ChevronDown size={20} />
-              </YStack>
-            </Select.ScrollDownButton>
-          </Select.Content>
-        </Select>
+    <YStack f={1} backgroundColor="$background">
+      <YStack p="$4" pb="$2">
+        <H3>Meal Plan</H3>
       </YStack>
 
-      <Separator />
-
-      {/* 14-Day List */}
-      <ScrollView f={1} p="$2">
-        <YStack gap="$2">
-          {isLoading ? (
-            <YStack p="$4" alignItems="center">
-              <Paragraph>Loading meal plan...</Paragraph>
-            </YStack>
-          ) : (
-            mealPlanItems.map(item => (
-              <DayItem
-                key={item.id}
-                item={item}
-                onSwap={handleSwapRecipe}
-              />
-            ))
-          )}
+      {/* Meal Plan List */}
+      {isLoading ? (
+        <YStack p="$4">
+          <Paragraph>Loading meal plan...</Paragraph>
         </YStack>
-      </ScrollView>
+      ) : (
+        <FlatList
+          data={mealPlanItems}
+          renderItem={renderDayItem}
+          keyExtractor={item => item.id.toString()}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={5}
+          windowSize={10}
+          initialNumToRender={7}
+        />
+      )}
 
       {/* Floating Action Button */}
       <YStack position="absolute" bottom="$4" right="$4">

@@ -67,9 +67,9 @@ function RootLayoutNav() {
   // Show loading spinner while checking authentication
   if (loading) {
     return (
-      <YStack f={1} justifyContent="center" alignItems="center" bg="$background">
+      <YStack f={1} jc="center" ai="center" bg="$background">
         <Spinner size="large" color="$blue10" />
-        <Paragraph mt="$4" theme="alt2">Loading...</Paragraph>
+        <Paragraph mt="$4">Loading...</Paragraph>
       </YStack>
     )
   }

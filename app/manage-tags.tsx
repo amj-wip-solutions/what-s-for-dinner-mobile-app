@@ -140,7 +140,7 @@ export default function ManageTagsScreen() {
         dismissOnSnapToBottom
       >
         <Sheet.Overlay />
-        <Sheet.Frame padding="$4">
+        <Sheet.Frame p="$4">
           <Sheet.Handle />
           <YStack gap="$4">
             <XStack ai="center" jc="space-between">
@@ -179,7 +179,7 @@ export default function ManageTagsScreen() {
               </Button>
               <Button
                 size="$4"
-                bg="$blue10"
+                theme="blue"
                 color="white"
                 icon={Save}
                 onPress={isEditing ? handleEditTag : handleCreateTag}
@@ -215,14 +215,14 @@ export default function ManageTagsScreen() {
         <H3 f={1} ta="center" mr="$8">Manage Tags</H3>
       </XStack>
 
-      <Paragraph mb="$4" theme="alt2">
+      <Paragraph mb="$4" col="$gray11">
         Create and manage tags to organize your recipes and set day-of-week rules.
       </Paragraph>
 
       {/* Create Tag Button */}
       <Button
         size="$4"
-        bg="$green10"
+        theme="green"
         color="white"
         icon={Plus}
         onPress={openCreateModal}
@@ -234,8 +234,8 @@ export default function ManageTagsScreen() {
       {/* Tags List */}
       {tags.length === 0 ? (
         <YStack f={1} ai="center" jc="center" gap="$3">
-          <Paragraph size="$6" theme="alt2">No tags yet</Paragraph>
-          <Paragraph theme="alt2" ta="center">
+          <Paragraph size="$6" col="$gray11">No tags yet</Paragraph>
+          <Paragraph col="$gray11" ta="center">
             Create your first tag to start organizing your recipes
           </Paragraph>
         </YStack>
@@ -247,13 +247,13 @@ export default function ManageTagsScreen() {
                 ai="center"
                 jc="space-between"
                 p="$3"
-                bg="$gray2"
-                borderRadius="$4"
+                bg="$gray3"
+                br="$4"
               >
                 <YStack f={1}>
                   <Paragraph fontWeight="600">{tag.name}</Paragraph>
                   {tag.description && (
-                    <Paragraph size="$3" theme="alt2">{tag.description}</Paragraph>
+                    <Paragraph size="$3" col="$gray11">{tag.description}</Paragraph>
                   )}
                 </YStack>
 
@@ -269,11 +269,8 @@ export default function ManageTagsScreen() {
                     variant="outlined"
                     borderColor="$red8"
                     icon={Trash2}
-                    iconAfter={undefined}
                     onPress={() => handleDeleteTag(tag)}
-                  >
-                    <Trash2 size="$1" color="$red10" />
-                  </Button>
+                  />
                 </XStack>
               </XStack>
               {index < tags.length - 1 && <Separator />}
