@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "expo-router-example",
-    "slug": "expo-router-example",
+    "name": "What's for Dinner",
+    "slug": "whats-for-dinner",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "whatsfordinner",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash.png",
@@ -16,13 +16,15 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourname.whatsfordinner"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.yourname.whatsfordinner"
     },
     "web": {
       "bundler": "metro",

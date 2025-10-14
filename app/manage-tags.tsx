@@ -158,15 +158,6 @@ export default function ManageTagsScreen() {
                   autoFocus
                 />
               </YStack>
-
-              <YStack gap="$2">
-                <Paragraph fontWeight="600">Description (optional)</Paragraph>
-                <Input
-                  placeholder="Brief description of this tag"
-                  value={newTagDescription}
-                  onChangeText={setNewTagDescription}
-                />
-              </YStack>
             </YStack>
 
             <XStack gap="$3" jc="flex-end">
@@ -231,17 +222,17 @@ export default function ManageTagsScreen() {
         Add New Tag
       </Button>
 
-      {/* Tags List */}
-      <ScrollView>
-        {tags.length === 0 ? (
-          <YStack f={1} ai="center" jc="center" gap="$3">
-            <Paragraph size="$6" col="$gray11">No tags yet</Paragraph>
-            <Paragraph col="$gray11" ta="center">
-              Create your first tag to start organizing your recipes
-            </Paragraph>
-          </YStack>
-        ) : (
-          <YStack f={1} gap="$2">
+      {/* Tags List - Fixed scroll area */}
+      {tags.length === 0 ? (
+        <YStack f={1} ai="center" jc="center" gap="$3">
+          <Paragraph size="$6" col="$gray11">No tags yet</Paragraph>
+          <Paragraph col="$gray11" ta="center">
+            Create your first tag to start organizing your recipes
+          </Paragraph>
+        </YStack>
+      ) : (
+        <ScrollView f={1} showsVerticalScrollIndicator={true}>
+          <YStack gap="$2" pb="$6">
             {tags.map((tag, index) => (
               <YStack key={tag.id}>
                 <XStack
@@ -251,11 +242,8 @@ export default function ManageTagsScreen() {
                   bg="$gray3"
                   br="$4"
                 >
-                  <YStack f={1}>
+                  <YStack f={1} mr="auto">
                     <Paragraph fontWeight="600">{tag.name}</Paragraph>
-                    {tag.description && (
-                      <Paragraph size="$3" col="$gray11">{tag.description}</Paragraph>
-                    )}
                   </YStack>
 
                   <XStack gap="$2">
@@ -278,8 +266,8 @@ export default function ManageTagsScreen() {
               </YStack>
             ))}
           </YStack>
-        )}
-      </ScrollView>
+        </ScrollView>
+      )}
 
       {renderTagModal()}
     </YStack>

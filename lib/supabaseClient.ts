@@ -10,7 +10,6 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Supabase URL or Anon Key is missing from environment variables.");
 }
-console.log(process.env)
 // Initialize the Supabase client for React Native
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {

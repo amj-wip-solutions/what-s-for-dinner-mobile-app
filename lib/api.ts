@@ -19,7 +19,6 @@ export const supabase = supabaseUrl && supabaseAnonKey
     ? createClient(supabaseUrl, supabaseAnonKey)
     : null
 
-console.log('Supabase client created:', supabase ? 'Success' : 'Failed')
 
 // API client using axios
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.197:3000/api'

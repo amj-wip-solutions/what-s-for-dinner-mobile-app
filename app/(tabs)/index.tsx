@@ -16,6 +16,7 @@ import { settingsService, UserSettings } from '../../services/settingsService'
 import { tagService, Tag } from '../../services/tagService'
 import { getRecipes } from '../../services/recipeService'
 import { dayRuleService } from '../../services/dayRuleService'
+import { getMealPlans, createMealPlan, getMealPlanItems, updateMealPlanItem, createMealPlanItems, MealPlan } from '../../services/mealPlanService'
 
 const DayItem = ({ item, onSwap }) => {
   const formatDate = (dateString) => {
@@ -167,13 +168,17 @@ export default function MealPlanScreen() {
   const loadUserData = async () => {
     setIsLoading(true)
     try {
+      console.log('🔄 Loading user data on app startup...')
+
       // Fetch user settings first
       const settings = await settingsService.getSettings()
       setUserSettings(settings)
+      console.log('Settings loaded:', settings)
 
       // Generate meal plan data based on settings
       const planDates = generateMealPlanDates(settings)
       const planName = formatDateRange(settings)
+      console.log('Generated plan dates:', planDates)
 
       // Create meal plan with proper dates
       const updatedMealPlan = {
@@ -192,16 +197,28 @@ export default function MealPlanScreen() {
         recipe: null, // No recipe assigned initially
         tags: [] // Empty tags array, will be populated with day rules
       }))
+      console.log('Initial meal plan items (before day rules):', updatedMealPlanItems)
 
       // Load day rules and associate tags with meal plan items
       updatedMealPlanItems = await loadDayRulesAndTags(updatedMealPlanItems)
+      console.log('Meal plan items with day rules loaded:', updatedMealPlanItems)
 
+      // Auto-assign compatible recipes to each day on initial load
+      updatedMealPlanItems = await autoAssignRecipes(updatedMealPlanItems)
+      console.log('After autoAssignRecipes on initial load:', updatedMealPlanItems)
+
+      // Ensure state is updated properly
+      console.log('Setting meal plan state...')
       setActiveMealPlan(updatedMealPlan)
       setMealPlanItems(updatedMealPlanItems)
 
-      console.log(`Loaded ${settings.plannerDuration}-day meal plan:`, planName)
+      // Verify state was set
+      console.log('Meal plan set:', updatedMealPlan)
+      console.log('Meal plan items set:', updatedMealPlanItems.length, 'items')
+
+      console.log(`✅ Loaded ${settings.plannerDuration}-day meal plan: ${planName}`)
     } catch (error) {
-      console.error('Error loading user data:', error)
+      console.error('❌ Error loading user data:', error)
       Alert.alert('Error', 'Failed to load meal plan data')
     } finally {
       setIsLoading(false)
@@ -314,12 +331,16 @@ export default function MealPlanScreen() {
           onPress: async () => {
             try {
               setIsLoading(true)
+              console.log('\n🚀 Starting new meal plan generation...')
+
               // Generate new meal plan data
               const settings = await settingsService.getSettings()
               setUserSettings(settings)
+              console.log('Settings loaded:', settings)
 
               const planDates = generateMealPlanDates(settings)
               const planName = formatDateRange(settings)
+              console.log('Generated plan dates:', planDates)
 
               const updatedMealPlan = {
                 id: 1,
@@ -337,17 +358,27 @@ export default function MealPlanScreen() {
                 recipe: null, // No recipe assigned initially
                 tags: [] // Empty tags array, will be populated with day rules
               }))
+              console.log('Initial meal plan items (before day rules):', updatedMealPlanItems)
 
               // Load day rules and associate tags with meal plan items
               updatedMealPlanItems = await loadDayRulesAndTags(updatedMealPlanItems)
+              console.log('Meal plan items with day rules:', updatedMealPlanItems)
 
               // Auto-assign compatible recipes to each day
+              console.log('About to call autoAssignRecipes...')
               updatedMealPlanItems = await autoAssignRecipes(updatedMealPlanItems)
+              console.log('After autoAssignRecipes, final items:', updatedMealPlanItems)
+
+              // Persist the new meal plan and items to the database
+              await persistMealPlan(updatedMealPlan, updatedMealPlanItems)
 
               setActiveMealPlan(updatedMealPlan)
               setMealPlanItems(updatedMealPlanItems)
 
-              Alert.alert('Success', `New ${planType} meal plan generated with smart recipe assignments!`)
+              const assignedCount = updatedMealPlanItems.filter(item => item.recipe !== null).length
+              console.log(`Final assignment count: ${assignedCount}/${updatedMealPlanItems.length}`)
+
+              Alert.alert('Success', `New ${planType} meal plan generated with smart recipe assignments! (${assignedCount}/${updatedMealPlanItems.length} days assigned)`)
             } catch (error) {
               console.error('Error generating new meal plan:', error)
               Alert.alert('Error', 'Failed to generate new meal plan')
@@ -363,24 +394,40 @@ export default function MealPlanScreen() {
   // Helper function to automatically assign compatible recipes to meal plan days
   const autoAssignRecipes = async (mealPlanItems: any[]) => {
     try {
+      console.log('Starting auto-assignment of recipes...')
+
       // Fetch all available recipes
       const allRecipes = await getRecipes()
+      console.log(`Found ${allRecipes.length} recipes available for assignment`)
 
       if (allRecipes.length === 0) {
         console.log('No recipes available for auto-assignment')
+        Alert.alert('No Recipes', 'No recipes found. Please add some recipes first before generating a meal plan.')
         return mealPlanItems
       }
 
-      const itemsWithRecipes = mealPlanItems.map(item => {
+      // Log recipe data structure for debugging
+      if (allRecipes.length > 0) {
+        console.log('Sample recipe data:', JSON.stringify(allRecipes[0], null, 2))
+      }
+
+      const itemsWithRecipes = mealPlanItems.map((item, index) => {
+        console.log(`\n--- Processing ${item.dayOfWeek} (Day ${index + 1}) ---`)
+        console.log(`Day tags:`, item.tags?.map(t => t.name) || 'none')
+
         // Find compatible recipes for this day
         const compatibleRecipes = filterRecipesByDayTags(allRecipes, item)
+        console.log(`Found ${compatibleRecipes.length} compatible recipes for ${item.dayOfWeek}`)
 
         if (compatibleRecipes.length > 0) {
+          // Log compatible recipe names
+          console.log('Compatible recipes:', compatibleRecipes.map(r => r.name).join(', '))
+
           // Randomly select a compatible recipe
           const randomRecipe = compatibleRecipes[Math.floor(Math.random() * compatibleRecipes.length)]
 
-          console.log(`Auto-assigned "${randomRecipe.name}" to ${item.dayOfWeek}`)
-          console.log(`Day tags: ${item.tags?.map(t => t.name).join(', ') || 'none'}`)
+          console.log(`✅ Auto-assigned "${randomRecipe.name}" to ${item.dayOfWeek}`)
+          console.log(`Recipe tags:`, randomRecipe.tagIds || [])
 
           return {
             ...item,
@@ -388,15 +435,19 @@ export default function MealPlanScreen() {
           }
         } else {
           const dayTagNames = item.tags?.map(tag => tag.name).join(', ') || 'no tags'
-          console.log(`No compatible recipes found for ${item.dayOfWeek} (requires: ${dayTagNames})`)
+          console.log(`❌ No compatible recipes found for ${item.dayOfWeek} (requires: ${dayTagNames})`)
 
           return item // Keep without recipe assignment
         }
       })
 
+      const assignedCount = itemsWithRecipes.filter(item => item.recipe !== null).length
+      console.log(`\n🎯 Assignment complete: ${assignedCount}/${mealPlanItems.length} days assigned recipes`)
+
       return itemsWithRecipes
     } catch (error) {
       console.error('Error auto-assigning recipes:', error)
+      Alert.alert('Error', 'Failed to auto-assign recipes. Please try again.')
       return mealPlanItems // Return original items if there's an error
     }
   }
@@ -442,6 +493,9 @@ export default function MealPlanScreen() {
 
               // Auto-assign compatible recipes to each day
               updatedMealPlanItems = await autoAssignRecipes(updatedMealPlanItems)
+
+              // Persist the recreated meal plan and items to the database
+              await persistMealPlan(updatedMealPlan, updatedMealPlanItems)
 
               setActiveMealPlan(updatedMealPlan)
               setMealPlanItems(updatedMealPlanItems)
@@ -513,6 +567,45 @@ export default function MealPlanScreen() {
       onSwap={handleSwapRecipe}
     />
   ), [])
+
+  // Helper function to create and persist a meal plan with its items to the database
+  const persistMealPlan = async (mealPlan: any, mealPlanItems: any[]) => {
+    try {
+      console.log('💾 Saving meal plan to database...', mealPlan.name)
+
+      // Create the meal plan in the database using the imported API service function
+      const savedMealPlan = await createMealPlan({
+        name: mealPlan.name,
+        startDate: mealPlan.startDate,
+        duration: userSettings?.plannerDuration || 7
+      })
+
+      console.log('✅ Meal plan saved to database:', savedMealPlan)
+
+      // Prepare meal plan items for bulk creation
+      const itemsToCreate = mealPlanItems.map((item) => ({
+        mealPlanId: savedMealPlan.id,
+        date: item.date,
+        recipeId: item.recipe ? item.recipe.id : null // null for days without recipes
+      }))
+
+      // Bulk create all meal plan items with their recipe assignments
+      if (itemsToCreate.length > 0) {
+        console.log(`📝 Creating ${itemsToCreate.length} meal plan items...`)
+        const savedItems = await createMealPlanItems(itemsToCreate)
+        console.log(`✅ Successfully created ${savedItems.length} meal plan items`)
+
+        // Log which items have recipes assigned
+        const assignedCount = savedItems.filter(item => item.recipeId !== null).length
+        console.log(`📊 Recipe assignments: ${assignedCount}/${savedItems.length} days have recipes`)
+      }
+
+      return savedMealPlan
+    } catch (error) {
+      console.error('❌ Error persisting meal plan to database:', error)
+      throw error
+    }
+  }
 
   return (
     <YStack f={1} backgroundColor="$background">
