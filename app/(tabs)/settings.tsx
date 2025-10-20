@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
-import { YStack, XStack, Button, H4, Paragraph, Separator, Switch, Spinner, ScrollView, Select } from 'tamagui'
-import { ChevronRight, Calendar, Tag, LogOut, User, Settings, Check, ChevronDown } from '@tamagui/lucide-icons'
+import { YStack, XStack, Button, H3, Paragraph, Separator, Switch, Spinner, ScrollView, Select, Text } from 'tamagui'
+import { ChevronRight, Calendar, Tag, LogOut, User, Check, ChevronDown } from '@tamagui/lucide-icons'
 import { useAuth } from '../../contexts/AuthContext'
 import { Alert } from 'react-native'
 import { Link } from 'expo-router'
 import { settingsService, UserSettings } from '../../services/settingsService'
+import { ScreenLayout } from '../../components/ScreenLayout'
+import { SectionHeader } from '../../components/SectionHeader'
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth()
@@ -38,10 +40,9 @@ export default function SettingsScreen() {
         [key]: value
       })
       setUserSettings(updatedSettings)
-      // Close the select after successful update
+
       if (key === 'plannerDuration') {
         setSelectOpen(false)
-        // Show warning about recreating meal planner
         Alert.alert(
           'Settings Updated',
           'Your plan duration has been updated. To apply the new settings, please recreate your meal planner from the main screen.',
@@ -80,149 +81,244 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScrollView f={1} bg="$background">
-      <YStack f={1} p="$4" pb="$8">
-        {/* User Info */}
-        {user && (
-          <YStack mb="$4" p="$3" bg="$gray3" br="$4">
-            <XStack ai="center" gap="$2">
-              <User size="$1" />
-              <YStack f={1}>
-                <Paragraph size="$3" col="$gray11">{user.email}</Paragraph>
-              </YStack>
-            </XStack>
-          </YStack>
-        )}
+    <ScreenLayout title="Settings">
+      <ScrollView flex={1} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+        <YStack padding="$4" gap="$6">
 
-        {/* User Settings Configuration */}
-        <YStack mb="$4" p="$4" bg="$gray2" br="$4">
-          <XStack ai="center" gap="$2" mb="$3">
-            <Settings size="$1" color="$blue10" />
-            <H4>Meal Plan Preferences</H4>
-            {saving && <Spinner size="small" color="$blue10" />}
-          </XStack>
-
-          {loading ? (
-            <YStack ai="center" jc="center" height="$6">
-              <Spinner size="large" />
-            </YStack>
-          ) : userSettings ? (
-            <YStack gap="$3">
-              {/* Planner Duration */}
-              <YStack gap="$2">
-                <Paragraph fontWeight="600">Plan Duration</Paragraph>
-                <Select
-                  value={userSettings.plannerDuration.toString()}
-                  onValueChange={(value) => updateSetting('plannerDuration', parseInt(value))}
-                  disabled={saving}
-                  open={selectOpen}
-                  onOpenChange={setSelectOpen}
+          {/* Account Section */}
+          <YStack gap="$3">
+            <SectionHeader>Account</SectionHeader>
+            {user && (
+              <XStack
+                padding="$4"
+                borderWidth={1}
+                borderColor="$borderColor"
+                borderRadius="$4"
+                alignItems="center"
+                gap="$3"
+                backgroundColor="$background"
+              >
+                <YStack
+                  width={40}
+                  height={40}
+                  borderRadius={20}
+                  backgroundColor="$gray2"
+                  alignItems="center"
+                  justifyContent="center"
                 >
-                  <Select.Trigger w="100%" iconAfter={ChevronDown}>
-                    <Select.Value />
-                  </Select.Trigger>
+                  <User size={20} color="$gray7" />
+                </YStack>
+                <Paragraph flex={1} color="$color">{user.email}</Paragraph>
+              </XStack>
+            )}
+          </YStack>
 
-                  <Select.Content zIndex={200000}>
-                    <Select.Item index={0} value="7">
-                      <Select.ItemText>1 Week (7 days)</Select.ItemText>
-                      <Select.ItemIndicator ml="auto">
-                        <Check size={16} />
-                      </Select.ItemIndicator>
-                    </Select.Item>
-                    <Select.Item index={1} value="14">
-                      <Select.ItemText>2 Weeks (14 days)</Select.ItemText>
-                      <Select.ItemIndicator ml="auto">
-                        <Check size={16} />
-                      </Select.ItemIndicator>
-                    </Select.Item>
-                  </Select.Content>
-                </Select>
-                <Paragraph size="$2" col="$gray11">
-                  Choose how many days to plan at once
-                </Paragraph>
+          {/* Preferences Section */}
+          <YStack gap="$3">
+            <SectionHeader>Preferences</SectionHeader>
+
+            {loading ? (
+              <YStack alignItems="center" justifyContent="center" height="$10">
+                <Spinner size="large" color="$brand" />
               </YStack>
-
-              {/* Auto Create Plans */}
-                <YStack f={1} gap="$2" ai="center" jc="flex-start" mt="$3">
-                    <Paragraph fontWeight="600">Auto-create New Plans</Paragraph>
-                    <Switch
-                        size="$4"
-                        checked={userSettings.autoCreatePlans}
-                        onCheckedChange={(checked) => updateSetting('autoCreatePlans', checked)}
-                        disabled={saving}
+            ) : userSettings ? (
+              <YStack
+                borderWidth={1}
+                borderColor="$borderColor"
+                borderRadius="$4"
+                overflow="hidden"
+                backgroundColor="$background"
+              >
+                {/* Plan Duration */}
+                <YStack padding="$4" borderBottomWidth={1} borderBottomColor="$borderColor">
+                  <YStack gap="$2" marginBottom="$3">
+                    <Paragraph fontWeight="600" color="$color">Plan Duration</Paragraph>
+                    <Paragraph size="$2" color="$gray6">
+                      How many days to plan at once
+                    </Paragraph>
+                  </YStack>
+                  <Select
+                    value={userSettings.plannerDuration.toString()}
+                    onValueChange={(value) => updateSetting('plannerDuration', parseInt(value))}
+                    disabled={saving}
+                  >
+                    <Select.Trigger
+                      width="100%"
+                      borderColor="$borderColor"
+                      iconAfter={ChevronDown}
                     >
-                        <Switch.Thumb animation="bouncy" />
+                      <Select.Value placeholder="Select duration" />
+                    </Select.Trigger>
+
+                    <Select.Adapt when="sm" platform="touch">
+                      <Select.Sheet modal dismissOnSnapToBottom>
+                        <Select.Sheet.Frame>
+                          <Select.Sheet.ScrollView>
+                            <Select.Adapt.Contents />
+                          </Select.Sheet.ScrollView>
+                        </Select.Sheet.Frame>
+                        <Select.Sheet.Overlay />
+                      </Select.Sheet>
+                    </Select.Adapt>
+
+                    <Select.Content zIndex={200000}>
+                      <Select.ScrollUpButton
+                        alignItems="center"
+                        justifyContent="center"
+                        position="relative"
+                        width="100%"
+                        height="$3"
+                      >
+                        <YStack zIndex={10}>
+                          <ChevronDown size={20} />
+                        </YStack>
+                      </Select.ScrollUpButton>
+
+                      <Select.Viewport minWidth={200}>
+                        <Select.Group>
+                          <Select.Label>Duration</Select.Label>
+                          <Select.Item index={0} value="7">
+                            <Select.ItemText>1 Week (7 days)</Select.ItemText>
+                            <Select.ItemIndicator marginLeft="auto">
+                              <Check size={16} />
+                            </Select.ItemIndicator>
+                          </Select.Item>
+                          <Select.Item index={1} value="14">
+                            <Select.ItemText>2 Weeks (14 days)</Select.ItemText>
+                            <Select.ItemIndicator marginLeft="auto">
+                              <Check size={16} />
+                            </Select.ItemIndicator>
+                          </Select.Item>
+                        </Select.Group>
+                      </Select.Viewport>
+
+                      <Select.ScrollDownButton
+                        alignItems="center"
+                        justifyContent="center"
+                        position="relative"
+                        width="100%"
+                        height="$3"
+                      >
+                        <YStack zIndex={10}>
+                          <ChevronDown size={20} />
+                        </YStack>
+                      </Select.ScrollDownButton>
+                    </Select.Content>
+                  </Select>
+                </YStack>
+
+                {/* Auto Create Plans */}
+                <YStack padding="$4">
+                  <XStack justifyContent="space-between" alignItems="center" gap="$3">
+                    <YStack flex={1}>
+                      <Paragraph fontWeight="600" color="$color">Auto-create Plans</Paragraph>
+                      <Paragraph size="$2" color="$gray6">
+                        Automatically create new plans when current expires
+                      </Paragraph>
+                    </YStack>
+                    <Switch
+                      checked={userSettings.autoCreatePlans}
+                      onCheckedChange={(checked) => updateSetting('autoCreatePlans', checked)}
+                      disabled={saving}
+                    >
+                      <Switch.Thumb animation="bouncy" />
                     </Switch>
+                  </XStack>
                 </YStack>
+              </YStack>
+            ) : (
+              <Paragraph color="$gray6">Failed to load settings</Paragraph>
+            )}
+          </YStack>
+
+          {/* Management Section */}
+          <YStack gap="$3">
+            <SectionHeader>Management</SectionHeader>
+
+            <YStack
+              borderWidth={1}
+              borderColor="$borderColor"
+              borderRadius="$4"
+              overflow="hidden"
+              backgroundColor="$background"
+            >
+              <Link href="/day-rules" asChild>
+                <Button
+                  size="$4"
+                  backgroundColor="transparent"
+                  borderBottomWidth={1}
+                  borderBottomColor="$borderColor"
+                  borderRadius={0}
+                  justifyContent="space-between"
+                  iconAfter={<ChevronRight size={20} color="$gray6" />}
+                  pressStyle={{ backgroundColor: '$backgroundHover' }}
+                  paddingVertical="$4"
+                  height="auto"
+                >
+                  <XStack gap="$3" alignItems="center" flex={1}>
+                    <Calendar size={20} color="$gray7" />
+                    <YStack alignItems="flex-start" flex={1} gap="$1">
+                      <Paragraph fontWeight="600" color="$color">Day Rules</Paragraph>
+                      <Paragraph size="$2" color="$gray6">
+                        Set tag rules for each day
+                      </Paragraph>
+                    </YStack>
+                  </XStack>
+                </Button>
+              </Link>
+
+              <Link href="/manage-tags" asChild>
+                <Button
+                  size="$4"
+                  backgroundColor="transparent"
+                  borderRadius={0}
+                  justifyContent="space-between"
+                  iconAfter={<ChevronRight size={20} color="$gray6" />}
+                  pressStyle={{ backgroundColor: '$backgroundHover' }}
+                  paddingVertical="$4"
+                  height="auto"
+                >
+                  <XStack gap="$3" alignItems="center" flex={1}>
+                    <Tag size={20} color="$gray7" />
+                    <YStack alignItems="flex-start" flex={1} gap="$1">
+                      <Paragraph fontWeight="600" color="$color">Manage Tags</Paragraph>
+                      <Paragraph size="$2" color="$gray6">
+                        Create and edit recipe tags
+                      </Paragraph>
+                    </YStack>
+                  </XStack>
+                </Button>
+              </Link>
             </YStack>
-          ) : (
-            <Paragraph col="$gray11">Failed to load settings</Paragraph>
-          )}
-        </YStack>
+          </YStack>
 
-        <YStack gap="$2">
-          {/* Day of the Week Rules */}
-          <Link href="/day-rules" asChild>
+          {/* Danger Zone */}
+          <YStack gap="$3">
+            <SectionHeader>Danger Zone</SectionHeader>
+
             <Button
-              size="$5"
-              bg="$background"
-              borderColor="$borderColor"
+              size="$4"
               borderWidth={1}
-              jc="flex-start"
-              iconAfter={<ChevronRight size="$1" />}
+              borderColor="$error"
+              backgroundColor="transparent"
+              color="$error"
+              icon={<LogOut size={20} />}
+              onPress={handleLogout}
+              borderRadius="$4"
+              fontWeight="600"
+              pressStyle={{
+                backgroundColor: '$error',
+                color: '$white',
+              }}
             >
-              <XStack ai="center" gap="$3" f={1}>
-                <Calendar size="$1" color="$blue10" />
-                <YStack f={1} ai="flex-start">
-                  <Paragraph fontWeight="600">Day of the Week Rules</Paragraph>
-                  <Paragraph size="$2" col="$gray11">
-                    Set fortnightly rules for each day
-                  </Paragraph>
-                </YStack>
-              </XStack>
+              Sign Out
             </Button>
-          </Link>
+          </YStack>
 
-          {/* Manage Tags */}
-          <Link href="/manage-tags" asChild>
-            <Button
-              size="$5"
-              bg="$background"
-              borderColor="$borderColor"
-              borderWidth={1}
-              jc="flex-start"
-              iconAfter={<ChevronRight size="$1" />}
-            >
-              <XStack ai="center" gap="$3" f={1}>
-                <Tag size="$1" color="$green10" />
-                <YStack f={1} ai="flex-start">
-                  <Paragraph fontWeight="600">Manage Tags</Paragraph>
-                  <Paragraph size="$2" col="$gray11">
-                    Create and edit your recipe tags
-                  </Paragraph>
-                </YStack>
-              </XStack>
-            </Button>
-          </Link>
-
-          <Separator mv="$3" />
-
-          {/* Account Actions */}
-          <Button
-            size="$5"
-            bg="$background"
-            borderColor="$red8"
-            borderWidth={1}
-            jc="flex-start"
-            onPress={handleLogout}
-          >
-            <XStack ai="center" gap="$3" f={1}>
-              <LogOut size="$1" color="$red10" />
-              <Paragraph fontWeight="600" col="$red11">Sign Out</Paragraph>
-            </XStack>
-          </Button>
+          {/* Bottom spacer for tab bar */}
+          <YStack height={80} />
         </YStack>
-      </YStack>
-    </ScrollView>
+      </ScrollView>
+    </ScreenLayout>
   )
 }

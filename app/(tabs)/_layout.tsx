@@ -8,16 +8,26 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: theme.red10.val,
+        tabBarActiveTintColor: theme.brand?.val || '#10b981',
+        tabBarInactiveTintColor: theme.gray6?.val || '#737373',
         tabBarStyle: {
-          backgroundColor: theme.background.val,
-          borderTopColor: theme.borderColor.val,
+          backgroundColor: theme.background?.val,
+          borderTopWidth: 1,
+          borderTopColor: theme.borderColor?.val,
+          elevation: 0,
+          shadowOpacity: 0,
         },
         headerStyle: {
-          backgroundColor: theme.background.val,
-          borderBottomColor: theme.borderColor.val,
+          backgroundColor: theme.background?.val,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.borderColor?.val,
+          elevation: 0,
+          shadowOpacity: 0,
         },
-        headerTintColor: theme.color.val,
+        headerTintColor: theme.color?.val,
+        headerTitleStyle: {
+          fontWeight: '600',
+        },
       }}
     >
       <Tabs.Screen

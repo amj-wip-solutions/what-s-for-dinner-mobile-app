@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-
-import { YStack, XStack, Button, H4, Paragraph, Sheet, Spinner, ScrollView } from 'tamagui'
+import { YStack, XStack, Button, H4, Paragraph, Sheet, Spinner, ScrollView, Text } from 'tamagui'
 import { ChevronDown, Save } from '@tamagui/lucide-icons'
 import { useRouter } from 'expo-router'
 import { Alert } from 'react-native'
 import { tagService, Tag } from '../services/tagService'
 import { dayRuleService } from '../services/dayRuleService'
+import { ScreenLayout } from '../components/ScreenLayout'
 
 const DAYS = [
     { value: 1, label: 'Monday' },
@@ -99,15 +99,11 @@ export default function DayRulesScreen() {
                 }
             }
 
-            Alert.alert('Success', 'Day rules have been saved successfully!')
-            // In a real app, router.back() would be used.
-            // For this example, we'll just log it.
-            console.log('Navigating back');
-            // router.back()
+            Alert.alert('Success', 'Day rules saved successfully!')
+            router.back()
         } catch (error) {
-            console.error('Error saving rules:', error);
-            // This is a simplified error handling. The original more detailed one is also great.
-            Alert.alert('Error', `Failed to save day rules: ${error?.message || 'Unknown error'}`);
+            console.error('Error saving rules:', error)
+            Alert.alert('Error', `Failed to save day rules: ${error?.message || 'Unknown error'}`)
         } finally {
             setSaving(false)
         }
@@ -122,23 +118,33 @@ export default function DayRulesScreen() {
 
     const renderDayRule = (day: typeof DAYS[0]) => {
         const rule = rules.find(r => r.dayOfWeek === day.value)
-
         const selectedTag = rule?.tagId ? tags.find(t => t.id === rule.tagId) : null
         const displayValue = selectedTag ? selectedTag.name : "No rule"
 
         return (
-            <XStack key={day.value} ai="center" jc="space-between" py="$2">
-                <Paragraph width={80}>{day.label}</Paragraph>
+            <YStack key={day.value} borderBottomWidth={1} borderBottomColor="$borderColor" py="$3">
+                <XStack ai="center" jc="space-between">
+                    <Paragraph fontWeight="600" color="$color" width={100}>{day.label}</Paragraph>
 
-                <Button
-                    width={200}
-                    variant="outlined"
-                    iconAfter={ChevronDown}
-                    onPress={() => toggleSheet(day.value, true)}
-                    jc="space-between"
-                >
-                    {displayValue}
-                </Button>
+                    <Button
+                        flex={1}
+                        backgroundColor="transparent"
+                        borderWidth={1}
+                        borderColor="$borderColor"
+                        iconAfter={<ChevronDown size={16} color="$gray6" />}
+                        onPress={() => toggleSheet(day.value, true)}
+                        justifyContent="space-between"
+                        color="$color"
+                        borderRadius="$2"
+                        pressStyle={{
+                            backgroundColor: '$backgroundHover',
+                        }}
+                    >
+                        <Text color={selectedTag ? '$color' : '$gray6'}>
+                            {displayValue}
+                        </Text>
+                    </Button>
+                </XStack>
 
                 <Sheet
                     modal
@@ -147,28 +153,44 @@ export default function DayRulesScreen() {
                     dismissOnSnapToBottom
                     snapPointsMode="fit"
                 >
-                    <Sheet.Frame p="$4" gap="$4">
+                    <Sheet.Frame p="$4" gap="$3" backgroundColor="$background">
                         <YStack gap="$2">
-                            <H4 mb="$2">Select rule for {day.label}</H4>
+                            <H4 mb="$2" color="$color">Select tag for {day.label}</H4>
+
                             <Button
-                                variant={rule?.tagId === null ? "outlined" : "ghost"}
+                                backgroundColor={rule?.tagId === null ? '$gray2' : 'transparent'}
+                                borderWidth={1}
+                                borderColor={rule?.tagId === null ? '$borderColor' : 'transparent'}
                                 onPress={() => {
                                     updateRule(day.value, null)
                                     toggleSheet(day.value, false)
                                 }}
-                                jc="flex-start"
+                                justifyContent="flex-start"
+                                color="$color"
+                                borderRadius="$2"
+                                pressStyle={{
+                                    backgroundColor: '$backgroundHover',
+                                }}
                             >
                                 No rule
                             </Button>
+
                             {tags.map((tag) => (
                                 <Button
                                     key={tag.id}
-                                    variant={rule?.tagId === tag.id ? "outlined" : "ghost"}
+                                    backgroundColor={rule?.tagId === tag.id ? '$gray2' : 'transparent'}
+                                    borderWidth={1}
+                                    borderColor={rule?.tagId === tag.id ? '$borderColor' : 'transparent'}
                                     onPress={() => {
                                         updateRule(day.value, tag.id)
                                         toggleSheet(day.value, false)
                                     }}
-                                    jc="flex-start"
+                                    justifyContent="flex-start"
+                                    color="$color"
+                                    borderRadius="$2"
+                                    pressStyle={{
+                                        backgroundColor: '$backgroundHover',
+                                    }}
                                 >
                                     {tag.name}
                                 </Button>
@@ -179,69 +201,82 @@ export default function DayRulesScreen() {
                         animation="lazy"
                         enterStyle={{ opacity: 0 }}
                         exitStyle={{ opacity: 0 }}
+                        backgroundColor="rgba(0,0,0,0.5)"
                     />
                 </Sheet>
-            </XStack>
+            </YStack>
         )
     }
 
     if (loading) {
         return (
-            <YStack f={1} ai="center" jc="center">
-                <Spinner size="large" />
-            </YStack>
+            <ScreenLayout title="Day Rules" showBack>
+                <YStack f={1} ai="center" jc="center">
+                    <Spinner size="large" color="$brand" />
+                </YStack>
+            </ScreenLayout>
         )
     }
 
     return (
-        // FIX: Added position="relative" to contain the absolutely positioned button
-        <YStack f={1} bg="$background" position="relative">
+        <ScreenLayout title="Day Rules" showBack>
+            <ScrollView flex={1} showsVerticalScrollIndicator={false}>
+                <YStack p="$4" gap="$4">
+                    <Paragraph color="$gray6" size="$3">
+                        Set tag-based rules for each day of the week to automatically filter recipes in your meal plans.
+                    </Paragraph>
 
-            {/* Scrollable Content Area */}
-            <ScrollView f={1} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-                <YStack p="$4" pt="$0" gap="$4">
-
-                    {tags.length === 0 && (
-                        <YStack p="$4" bg="$yellow3" br="$4">
-                            <Paragraph color="$yellow11">
-                                You need to create some tags first before setting day rules.
-                                Go to "Manage Tags" to create tags like "vegetarian", "quick", etc.
-                            </Paragraph>
-                        </YStack>
-                    )}
-
-                    <YStack>
-                        <H4 mb="$3">Weekly Rules</H4>
-                        <YStack bg="$gray3" p="$3" br="$4" gap="$1">
-                            {DAYS.map(day => renderDayRule(day))}
-                        </YStack>
+                    <YStack
+                        borderWidth={1}
+                        borderColor="$borderColor"
+                        borderRadius="$4"
+                        overflow="hidden"
+                        backgroundColor="$background"
+                    >
+                        {DAYS.map((day, index) => (
+                            <YStack key={day.value}>
+                                {renderDayRule(day)}
+                            </YStack>
+                        ))}
                     </YStack>
+
+                    {/* Bottom spacer */}
+                    <YStack height={100} />
                 </YStack>
             </ScrollView>
 
-            {/* Save button container */}
-            <YStack
-                p="$4"
-                pb="$6"
-                bg="$background"
-                borderTopWidth={1}
-                borderTopColor="$gray5"
+            {/* Save Button */}
+            <XStack
                 position="absolute"
                 bottom={0}
                 left={0}
                 right={0}
+                borderTopWidth={1}
+                borderTopColor="$borderColor"
+                backgroundColor="$background"
+                p="$3"
+                shadowColor="$black"
+                shadowOffset={{ width: 0, height: -2 }}
+                shadowOpacity={0.05}
+                shadowRadius={8}
             >
                 <Button
-                    size="$5"
-                    bg="$blue10"
-                    color="white"
-                    icon={Save}
+                    flex={1}
+                    size="$4"
+                    backgroundColor="$brand"
+                    color="$white"
+                    icon={<Save size={18} />}
                     onPress={handleSave}
-                    disabled={saving || tags.length === 0}
+                    disabled={saving}
+                    borderRadius="$2"
+                    fontWeight="600"
+                    pressStyle={{
+                        backgroundColor: '$brandPress',
+                    }}
                 >
-                    {saving ? <Spinner color="white" /> : 'Save Rules'}
+                    {saving ? 'Saving...' : 'Save Changes'}
                 </Button>
-            </YStack>
-        </YStack>
+            </XStack>
+        </ScreenLayout>
     )
 }

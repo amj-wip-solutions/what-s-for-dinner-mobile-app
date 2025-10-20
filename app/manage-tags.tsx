@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react'
-import { YStack, XStack, Button, H3, Paragraph, Input, Sheet, Separator, Spinner, ScrollView } from 'tamagui'
-import { Plus, Edit3, Trash2, ArrowLeft, Save, X } from '@tamagui/lucide-icons'
-import { useRouter } from 'expo-router'
+import { YStack, XStack, Button, H3, Paragraph, Input, Sheet, Spinner, ScrollView } from 'tamagui'
+import { Plus, Edit3, Trash2, Save, X } from '@tamagui/lucide-icons'
 import { Alert } from 'react-native'
 import { tagService, Tag } from '../services/tagService'
+import { ScreenLayout } from '../components/ScreenLayout'
 
 export default function ManageTagsScreen() {
-  const router = useRouter()
   const [tags, setTags] = useState<Tag[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -136,47 +135,66 @@ export default function ManageTagsScreen() {
         onOpenChange={(open) => {
           if (!open) closeModals()
         }}
-        snapPoints={[50]}
+        snapPointsMode="fit"
         dismissOnSnapToBottom
       >
-        <Sheet.Overlay />
-        <Sheet.Frame p="$4">
-          <Sheet.Handle />
+        <Sheet.Overlay
+          animation="lazy"
+          enterStyle={{ opacity: 0 }}
+          exitStyle={{ opacity: 0 }}
+          backgroundColor="rgba(0,0,0,0.5)"
+        />
+        <Sheet.Frame padding="$4" backgroundColor="$background">
+          <Sheet.Handle backgroundColor="$borderColor" />
           <YStack gap="$4">
-            <XStack ai="center" jc="space-between">
-              <H3>{title}</H3>
-              <Button size="$3" chromeless icon={X} onPress={closeModals} />
+            <XStack alignItems="center" justifyContent="space-between">
+              <H3 color="$color">{title}</H3>
+              <Button
+                size="$3"
+                chromeless
+                icon={X}
+                onPress={closeModals}
+                color="$color"
+              />
             </XStack>
 
             <YStack gap="$3">
               <YStack gap="$2">
-                <Paragraph fontWeight="600">Name *</Paragraph>
+                <Paragraph fontWeight="600" color="$color">Name *</Paragraph>
                 <Input
                   placeholder="e.g., vegetarian, quick, pasta"
                   value={newTagName}
                   onChangeText={setNewTagName}
                   autoFocus
+                  borderColor="$borderColor"
+                  backgroundColor="$background"
                 />
               </YStack>
             </YStack>
 
-            <XStack gap="$3" jc="flex-end">
+            <XStack gap="$3" justifyContent="flex-end">
               <Button
                 size="$4"
-                variant="outlined"
+                backgroundColor="transparent"
+                borderWidth={1}
+                borderColor="$borderColor"
+                color="$color"
                 onPress={closeModals}
+                borderRadius="$2"
               >
                 Cancel
               </Button>
               <Button
                 size="$4"
-                theme="blue"
-                color="white"
+                backgroundColor="$brand"
+                color="$white"
                 icon={Save}
                 onPress={isEditing ? handleEditTag : handleCreateTag}
                 disabled={saving || !newTagName.trim()}
+                borderRadius="$2"
+                fontWeight="600"
               >
-                {saving ? <Spinner color="white" /> : (isEditing ? 'Update' : 'Create')}
+                {saving ? <Spinner color="$white" /> : (isEditing ? 'Update' : 'Create')}
               </Button>
             </XStack>
           </YStack>
@@ -187,89 +205,100 @@ export default function ManageTagsScreen() {
 
   if (loading) {
     return (
-      <YStack f={1} ai="center" jc="center">
-        <Spinner size="large" />
-      </YStack>
+      <ScreenLayout title="Manage Tags" showBack>
+        <YStack flex={1} alignItems="center" justifyContent="center">
+          <Spinner size="large" color="$brand" />
+        </YStack>
+      </ScreenLayout>
     )
   }
 
   return (
-    <YStack f={1} bg="$background" p="$4">
-      {/* Header */}
-      <XStack ai="center" mb="$4">
+    <ScreenLayout
+      title="Manage Tags"
+      showBack
+      headerAction={
         <Button
           size="$3"
           chromeless
-          icon={ArrowLeft}
-          onPress={() => router.back()}
+          icon={Plus}
+          onPress={openCreateModal}
+          color="$color"
         />
-        <H3 f={1} ta="center" mr="$8">Manage Tags</H3>
-      </XStack>
-
-      <Paragraph mb="$4" col="$gray11">
-        Create and manage tags to organize your recipes and set day-of-week rules.
-      </Paragraph>
-
-      {/* Create Tag Button */}
-      <Button
-        size="$4"
-        theme="green"
-        color="white"
-        icon={Plus}
-        onPress={openCreateModal}
-        mb="$4"
-      >
-        Add New Tag
-      </Button>
-
-      {/* Tags List - Fixed scroll area */}
-      {tags.length === 0 ? (
-        <YStack f={1} ai="center" jc="center" gap="$3">
-          <Paragraph size="$6" col="$gray11">No tags yet</Paragraph>
-          <Paragraph col="$gray11" ta="center">
-            Create your first tag to start organizing your recipes
+      }
+    >
+      <ScrollView flex={1} showsVerticalScrollIndicator={false}>
+        <YStack padding="$4" gap="$4">
+          <Paragraph color="$gray6" size="$3">
+            Create and manage tags to organize your recipes and set day-of-week rules.
           </Paragraph>
-        </YStack>
-      ) : (
-        <ScrollView f={1} showsVerticalScrollIndicator={true}>
-          <YStack gap="$2" pb="$6">
-            {tags.map((tag, index) => (
-              <YStack key={tag.id}>
-                <XStack
-                  ai="center"
-                  jc="space-between"
-                  p="$3"
-                  bg="$gray3"
-                  br="$4"
-                >
-                  <YStack f={1} mr="auto">
-                    <Paragraph fontWeight="600">{tag.name}</Paragraph>
-                  </YStack>
 
-                  <XStack gap="$2">
-                    <Button
-                      size="$3"
-                      variant="outlined"
-                      icon={Edit3}
-                      onPress={() => openEditModal(tag)}
-                    />
-                    <Button
-                      size="$3"
-                      variant="outlined"
-                      borderColor="$red8"
-                      icon={Trash2}
-                      onPress={() => handleDeleteTag(tag)}
-                    />
+          {/* Tags List */}
+          {tags.length === 0 ? (
+            <YStack flex={1} alignItems="center" justifyContent="center" gap="$3" paddingVertical="$8">
+              <Paragraph fontSize="$6" color="$gray6">No tags yet</Paragraph>
+              <Paragraph color="$gray6" textAlign="center">
+                Create your first tag to start organizing your recipes
+              </Paragraph>
+            </YStack>
+          ) : (
+            <YStack
+              borderWidth={1}
+              borderColor="$borderColor"
+              borderRadius="$4"
+              overflow="hidden"
+              backgroundColor="$background"
+            >
+              {tags.map((tag, index) => (
+                <YStack key={tag.id}>
+                  <XStack
+                    alignItems="center"
+                    justifyContent="space-between"
+                    padding="$3"
+                    backgroundColor="$background"
+                    borderBottomWidth={index < tags.length - 1 ? 1 : 0}
+                    borderBottomColor="$borderColor"
+                  >
+                    <YStack flex={1}>
+                      <Paragraph fontWeight="600" color="$color">{tag.name}</Paragraph>
+                    </YStack>
+
+                    <XStack gap="$2">
+                      <Button
+                        size="$3"
+                        circular
+                        chromeless
+                        icon={Edit3}
+                        color="$gray7"
+                        onPress={() => openEditModal(tag)}
+                        hoverStyle={{
+                          backgroundColor: '$gray2',
+                        }}
+                      />
+                      <Button
+                        size="$3"
+                        circular
+                        chromeless
+                        icon={Trash2}
+                        color="$error"
+                        onPress={() => handleDeleteTag(tag)}
+                        hoverStyle={{
+                          backgroundColor: '$gray2',
+                        }}
+                      />
+                    </XStack>
                   </XStack>
-                </XStack>
-                {index < tags.length - 1 && <Separator />}
-              </YStack>
-            ))}
-          </YStack>
-        </ScrollView>
-      )}
+                </YStack>
+              ))}
+            </YStack>
+          )}
+
+          {/* Bottom spacer */}
+          <YStack height={100} />
+        </YStack>
+      </ScrollView>
 
       {renderTagModal()}
-    </YStack>
+    </ScreenLayout>
   )
 }

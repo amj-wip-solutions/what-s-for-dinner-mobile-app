@@ -8,6 +8,7 @@ export interface MealPlan {
   userId: number;
   createdAt: string;
   updatedAt: string;
+  isActive?: boolean;
 }
 
 export interface MealPlanItem {
@@ -17,6 +18,44 @@ export interface MealPlanItem {
   recipeId: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MealPlanStatus {
+  status: 'active' | 'expired' | 'no_plan' | 'future_only';
+  currentPlan: {
+    id: number;
+    name: string;
+    startDate: string;
+    endDate: string;
+    daysRemaining: number;
+  } | null;
+  userSettings: {
+    plannerDuration: 7 | 14;
+    autoCreatePlans: boolean;
+  };
+  message: string;
+  action: 'continue' | 'create_new' | 'suggest_create';
+  hasRecipes: boolean;
+  today: string;
+}
+
+export interface AutoSetupResponse {
+  mealPlan: MealPlan;
+  items: Array<{
+    id: number;
+    mealPlanId: number;
+    date: string;
+    recipeId: number;
+    recipeName: string;
+    recipeUrl: string | null;
+    recipeImageUrl: string | null;
+  }>;
+  message: string;
+  settings: {
+    duration: number;
+    daysGenerated: number;
+    rulesApplied: number;
+  };
 }
 
 /**
@@ -128,6 +167,50 @@ export const createMealPlanItems = async (items: Array<{
     return response.data;
   } catch (error) {
     console.error('Error creating meal plan items:', error);
+    throw error;
+  }
+};
+
+/**
+ * Checks the status of the user's meal plan.
+ * GET /api/meal-plans/status
+ */
+export const checkMealPlanStatus = async (): Promise<MealPlanStatus> => {
+  try {
+    const response = await apiClient.get('/meal-plans/status');
+    return response.data;
+  } catch (error) {
+    console.error('Error checking meal plan status:', error);
+    throw error;
+  }
+};
+
+/**
+ * Automatically sets up a new meal plan with recipes.
+ * POST /api/meal-plans/auto-setup
+ * @param startDate - Optional start date, defaults to Monday of current week
+ */
+export const autoSetupMealPlan = async (startDate?: string): Promise<AutoSetupResponse> => {
+  try {
+    const response = await apiClient.post('/meal-plans/auto-setup', { startDate });
+    return response.data;
+  } catch (error) {
+    console.error('Error auto-setting up meal plan:', error);
+    throw error;
+  }
+};
+
+/**
+ * Gets the active meal plan for the user.
+ * This is a helper that filters for active plans from all plans.
+ */
+export const getActiveMealPlan = async (): Promise<MealPlan | null> => {
+  try {
+    const allPlans = await getMealPlans();
+    const activePlan = allPlans.find(plan => plan.isActive);
+    return activePlan || null;
+  } catch (error) {
+    console.error('Error fetching active meal plan:', error);
     throw error;
   }
 };

@@ -609,10 +609,6 @@ export default function MealPlanScreen() {
 
   return (
     <YStack f={1} backgroundColor="$background">
-      <YStack p="$4" pb="$2">
-        <H3>Meal Plan</H3>
-      </YStack>
-
       {/* Meal Plan List */}
       {isLoading ? (
         <YStack p="$4">
