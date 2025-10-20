@@ -21,7 +21,7 @@ export const supabase = supabaseUrl && supabaseAnonKey
 
 
 // API client using axios
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.197:3000/api'
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://172.16.47.4:3000/api'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

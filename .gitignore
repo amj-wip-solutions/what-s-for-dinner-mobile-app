@@ -42,7 +42,7 @@ node_modules
 .env.development.local
 .env.test.localp
 .env.production.local
-
+.env.production
 .expo
 ios
 android
