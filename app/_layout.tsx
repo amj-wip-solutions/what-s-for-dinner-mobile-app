@@ -83,7 +83,19 @@ function RootLayoutNav() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <Stack>
+      <Stack
+        screenOptions={{
+          contentStyle: {
+            backgroundColor: theme.background.val,
+          },
+          headerStyle: {
+            backgroundColor: theme.background.val,
+          },
+          cardStyle: {
+            backgroundColor: theme.background.val,
+          },
+        }}
+      >
         <Stack.Screen
           name="(tabs)"
           options={{
@@ -97,6 +109,58 @@ function RootLayoutNav() {
             headerShown: false,
             presentation: 'modal',
             animation: 'slide_from_bottom',
+            contentStyle: {
+              backgroundColor: theme.background.val,
+            },
+          }}
+        />
+
+        <Stack.Screen
+          name="day-rules"
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+            animation: 'slide_from_right',
+            contentStyle: {
+              backgroundColor: theme.background.val,
+            },
+          }}
+        />
+
+        <Stack.Screen
+          name="manage-tags"
+          options={{
+            headerShown: false,
+            presentation: 'card',
+            animation: 'slide_from_right',
+            gestureEnabled: true,
+            gestureDirection: 'horizontal',
+            contentStyle: {
+              backgroundColor: theme.background.val,
+            },
+          }}
+        />
+
+        <Stack.Screen
+          name="edit-recipe/[id]"
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+            contentStyle: {
+              backgroundColor: theme.background.val,
+            },
+          }}
+        />
+
+        <Stack.Screen
+          name="recipe-detail/[id]"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+            contentStyle: {
+              backgroundColor: theme.background.val,
+            },
           }}
         />
 

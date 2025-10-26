@@ -5,6 +5,7 @@ export interface UserSettings {
   userId: string
   plannerDuration: number // 7 or 14 days
   autoCreatePlans: boolean
+  weekStartDay: number // 1=Monday, 6=Saturday, 7=Sunday
   createdAt: string
   updatedAt: string
 }
@@ -12,6 +13,7 @@ export interface UserSettings {
 export interface UpdateUserSettingsRequest {
   plannerDuration?: number
   autoCreatePlans?: boolean
+  weekStartDay?: number
 }
 
 export const settingsService = {

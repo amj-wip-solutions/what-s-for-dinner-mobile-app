@@ -151,13 +151,16 @@ export default function DayRulesScreen() {
                     open={openSheets[day.value]}
                     onOpenChange={(open) => toggleSheet(day.value, open)}
                     dismissOnSnapToBottom
-                    snapPointsMode="fit"
+                    snapPointsMode="percent"
+                    snapPoints={[90]}
                 >
                     <Sheet.Frame p="$4" gap="$3" backgroundColor="$background">
+                        <Sheet.Handle backgroundColor="$borderColor" />
                         <YStack gap="$2">
                             <H4 mb="$2" color="$color">Select tag for {day.label}</H4>
 
                             <Button
+                                size="$5"
                                 backgroundColor={rule?.tagId === null ? '$gray2' : 'transparent'}
                                 borderWidth={1}
                                 borderColor={rule?.tagId === null ? '$borderColor' : 'transparent'}
@@ -178,6 +181,7 @@ export default function DayRulesScreen() {
                             {tags.map((tag) => (
                                 <Button
                                     key={tag.id}
+                                    size="$5"
                                     backgroundColor={rule?.tagId === tag.id ? '$gray2' : 'transparent'}
                                     borderWidth={1}
                                     borderColor={rule?.tagId === tag.id ? '$borderColor' : 'transparent'}
@@ -219,7 +223,24 @@ export default function DayRulesScreen() {
     }
 
     return (
-        <ScreenLayout title="Day Rules" showBack>
+        <ScreenLayout
+            title="Day Rules"
+            showBack
+            headerAction={
+                <Button
+                    size="$3"
+                    backgroundColor="$brand"
+                    color="$white"
+                    icon={<Save size={16} />}
+                    onPress={handleSave}
+                    disabled={saving}
+                    borderRadius="$2"
+                    paddingHorizontal="$3"
+                >
+                    {saving ? <Spinner size="small" color="$white" /> : 'Save'}
+                </Button>
+            }
+        >
             <ScrollView flex={1} showsVerticalScrollIndicator={false}>
                 <YStack p="$4" gap="$4">
                     <Paragraph color="$gray6" size="$3">
@@ -239,44 +260,8 @@ export default function DayRulesScreen() {
                             </YStack>
                         ))}
                     </YStack>
-
-                    {/* Bottom spacer */}
-                    <YStack height={100} />
                 </YStack>
             </ScrollView>
-
-            {/* Save Button */}
-            <XStack
-                position="absolute"
-                bottom={0}
-                left={0}
-                right={0}
-                borderTopWidth={1}
-                borderTopColor="$borderColor"
-                backgroundColor="$background"
-                p="$3"
-                shadowColor="$black"
-                shadowOffset={{ width: 0, height: -2 }}
-                shadowOpacity={0.05}
-                shadowRadius={8}
-            >
-                <Button
-                    flex={1}
-                    size="$4"
-                    backgroundColor="$brand"
-                    color="$white"
-                    icon={<Save size={18} />}
-                    onPress={handleSave}
-                    disabled={saving}
-                    borderRadius="$2"
-                    fontWeight="600"
-                    pressStyle={{
-                        backgroundColor: '$brandPress',
-                    }}
-                >
-                    {saving ? 'Saving...' : 'Save Changes'}
-                </Button>
-            </XStack>
         </ScreenLayout>
     )
 }

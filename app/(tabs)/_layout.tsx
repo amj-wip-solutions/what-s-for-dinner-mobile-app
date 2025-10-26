@@ -1,5 +1,5 @@
-import { Link, Tabs } from 'expo-router'
-import { Button, useTheme } from 'tamagui'
+import { Tabs } from 'expo-router'
+import { useTheme } from 'tamagui'
 import { Calendar, BookOpen, Settings } from '@tamagui/lucide-icons'
 
 export default function TabLayout() {
@@ -17,17 +17,7 @@ export default function TabLayout() {
           elevation: 0,
           shadowOpacity: 0,
         },
-        headerStyle: {
-          backgroundColor: theme.background?.val,
-          borderBottomWidth: 1,
-          borderBottomColor: theme.borderColor?.val,
-          elevation: 0,
-          shadowOpacity: 0,
-        },
-        headerTintColor: theme.color?.val,
-        headerTitleStyle: {
-          fontWeight: '600',
-        },
+        headerShown: false, // Hide the native header since ScreenLayout provides its own
       }}
     >
       <Tabs.Screen

@@ -108,14 +108,14 @@ export default function AddRecipeScreen() {
       <XStack p="$4" alignItems="center" justifyContent="space-between" borderBottomWidth={1} borderBottomColor="$borderColor">
         <Button
           size="$3"
-          variant="ghost"
+          chromeless
           icon={X}
           onPress={handleCancel}
         />
         <H3>Add Recipe</H3>
         <Button
           size="$3"
-          variant="ghost"
+          chromeless
           icon={Save}
           onPress={handleSave}
           disabled={isLoading}
@@ -260,16 +260,18 @@ export default function AddRecipeScreen() {
         open={showTagSelector}
         onOpenChange={setShowTagSelector}
         dismissOnSnapToBottom
-        snapPointsMode="fit"
+        snapPointsMode="percent"
+        snapPoints={[90]}
       >
-        <Sheet.Frame p="$4" gap="$4">
+        <Sheet.Frame p="$4" gap="$4" backgroundColor="$background">
+          <Sheet.Handle backgroundColor="$borderColor" />
           <YStack gap="$3">
             <H4>Select Tags</H4>
             <Paragraph color="$gray11" fontSize="$3">
               Choose tags to categorize this recipe
             </Paragraph>
 
-            <ScrollView maxHeight={300}>
+            <ScrollView maxHeight="100%">
               <YStack gap="$2">
                 {allTags.length > 0 ? (
                   allTags.map((tag) => {
@@ -277,14 +279,16 @@ export default function AddRecipeScreen() {
                     return (
                       <Button
                         key={tag.id}
-                        variant={isSelected ? "outlined" : "ghost"}
+                        size="$5"
+                        variant={isSelected ? "outlined" : undefined}
+                        chromeless={!isSelected}
                         onPress={() => toggleTag(tag)}
                         justifyContent="space-between"
-                        iconAfter={isSelected ? <Check size={16} /> : undefined}
+                        iconAfter={isSelected ? <Check size={20} /> : undefined}
                       >
-                        <XStack alignItems="center" gap="$2" flex={1}>
-                          <TagIcon size={16} color={isSelected ? "$blue10" : "$gray10"} />
-                          <Paragraph color={isSelected ? "$blue11" : "$gray11"}>
+                        <XStack alignItems="center" gap="$3" flex={1}>
+                          <TagIcon size={20} color={isSelected ? "$blue10" : "$gray10"} />
+                          <Paragraph fontSize="$5" color={isSelected ? "$blue11" : "$gray11"}>
                             {tag.name}
                           </Paragraph>
                         </XStack>
@@ -300,6 +304,7 @@ export default function AddRecipeScreen() {
             </ScrollView>
 
             <Button
+              size="$5"
               onPress={() => setShowTagSelector(false)}
               backgroundColor="$blue10"
               color="white"
@@ -312,6 +317,7 @@ export default function AddRecipeScreen() {
           animation="lazy"
           enterStyle={{ opacity: 0 }}
           exitStyle={{ opacity: 0 }}
+          backgroundColor="rgba(0,0,0,0.5)"
         />
       </Sheet>
     </YStack>

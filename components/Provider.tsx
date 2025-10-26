@@ -25,7 +25,7 @@ export function Provider({ children, ...rest }: Omit<TamaguiProviderProps, 'conf
       >
         {children}
         <CurrentToast />
-        <ToastViewport top="$8" left={0} right={0} />
+        <ToastViewport top="$4" left="$4" right="$4" />
       </ToastProvider>
     </TamaguiProvider>
   )

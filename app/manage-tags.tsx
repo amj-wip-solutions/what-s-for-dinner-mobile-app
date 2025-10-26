@@ -135,7 +135,8 @@ export default function ManageTagsScreen() {
         onOpenChange={(open) => {
           if (!open) closeModals()
         }}
-        snapPointsMode="fit"
+        snapPointsMode="percent"
+        snapPoints={[50]}
         dismissOnSnapToBottom
       >
         <Sheet.Overlay
@@ -162,10 +163,10 @@ export default function ManageTagsScreen() {
               <YStack gap="$2">
                 <Paragraph fontWeight="600" color="$color">Name *</Paragraph>
                 <Input
+                  size="$4"
                   placeholder="e.g., vegetarian, quick, pasta"
                   value={newTagName}
                   onChangeText={setNewTagName}
-                  autoFocus
                   borderColor="$borderColor"
                   backgroundColor="$background"
                 />

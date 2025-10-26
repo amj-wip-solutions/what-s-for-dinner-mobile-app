@@ -1,5 +1,5 @@
 import { createTamagui, createTokens } from 'tamagui'
-import { config as defaultConfig } from '@tamagui/config/v4'
+import { config as defaultConfig } from '@tamagui/config/v3'
 
 // Custom monochrome tokens
 const tokens = createTokens({
