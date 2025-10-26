@@ -1,19 +1,19 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Alert, FlatList } from 'react-native'
 import { YStack, XStack, Paragraph, Button } from 'tamagui'
-import { Plus, RotateCcw } from '@tamagui/lucide-icons'
+import { RotateCcw } from '@tamagui/lucide-icons'
 import { settingsService, UserSettings } from '../../services/settingsService'
 import { getRecipes } from '../../services/recipeService'
-import { getMealPlans, getMealPlanItems, autoSetupMealPlan } from '../../services/mealPlanService'
-import { transformMealPlanItems, transformAutoSetupItems } from '../../services/mealPlanTransformers'
+import { getMealPlans, getMealPlanItems, autoSetupMealPlan, MealPlan } from '../../services/mealPlanService'
+import { transformMealPlanItems, transformAutoSetupItems, TransformedMealPlanItem } from '../../services/mealPlanTransformers'
 import { filterRecipesByDayTags, formatMealPlanDateRange } from '../../utils/mealPlanUtils'
 import { ScreenLayout } from '../../components/ScreenLayout'
 import { DayItem } from '../../components/MealPlan'
 
 export default function MealPlanScreen() {
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null)
-  const [activeMealPlan, setActiveMealPlan] = useState(null)
-  const [mealPlanItems, setMealPlanItems] = useState([])
+  const [activeMealPlan, setActiveMealPlan] = useState<MealPlan | null>(null)
+  const [mealPlanItems, setMealPlanItems] = useState<TransformedMealPlanItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [swappingItemId, setSwappingItemId] = useState<number | null>(null)
   const [dateRangeText, setDateRangeText] = useState<string>('')
@@ -147,16 +147,16 @@ export default function MealPlanScreen() {
 
     const planType = userSettings.plannerDuration === 7 ? '7-day' : '14-day'
     Alert.alert(
-      'Generate New Meal Plan',
-      `This will create a new ${planType} meal plan with automatic recipe assignments based on your day rules. Continue?`,
+      'Refresh Meal Plan',
+      `This will refresh your ${planType} meal plan with automatic recipe assignments based on your current settings and day rules. Continue?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Continue',
+          text: 'Refresh',
           onPress: async () => {
             try {
               setIsLoading(true)
-              console.log('\n🚀 Starting new meal plan generation...')
+              console.log('\n🚀 Starting meal plan refresh...')
 
               // Use the backend's auto-setup to create the meal plan
               const autoSetup = await autoSetupMealPlan()
@@ -171,53 +171,12 @@ export default function MealPlanScreen() {
               setMealPlanItems(transformedItems)
 
               const assignedCount = transformedItems.filter(item => item.recipe !== null).length
-              Alert.alert('Success', `New ${planType} meal plan generated with smart recipe assignments! (${assignedCount}/${transformedItems.length} days assigned)`)
+              Alert.alert('Success', `Meal plan refreshed with smart recipe assignments! (${assignedCount}/${transformedItems.length} days assigned)`)
 
-              console.log(`✅ Created new ${transformedItems.length}-day meal plan via auto-setup`)
+              console.log(`✅ Refreshed ${transformedItems.length}-day meal plan`)
             } catch (error) {
-              console.error('Error generating new meal plan:', error)
-              Alert.alert('Error', 'Failed to generate new meal plan')
-            } finally {
-              setIsLoading(false)
-            }
-          }
-        }
-      ]
-    )
-  }
-
-  const handleRecreateMealPlan = async () => {
-    Alert.alert(
-      'Recreate Meal Planner',
-      'This will recreate your meal planner with the latest settings and day rules, and automatically assign compatible recipes. Any existing recipes will be cleared. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Recreate',
-          onPress: async () => {
-            try {
-              setIsLoading(true)
-
-              // Use the backend's auto-setup to recreate the meal plan with latest settings
-              const autoSetup = await autoSetupMealPlan()
-              console.log('Auto-setup response:', autoSetup)
-
-              setDateRangeText(formatMealPlanDateRange(autoSetup.mealPlan.startDate, autoSetup.mealPlan.endDate))
-
-              // Transform auto-setup items to UI format
-              const transformedItems = await transformAutoSetupItems(autoSetup.items)
-
-              setActiveMealPlan(autoSetup.mealPlan)
-              setMealPlanItems(transformedItems)
-
-              const planDuration = autoSetup.items.length
-              const planType = planDuration === 7 ? '7-day' : '14-day'
-              Alert.alert('Success', `Meal planner recreated with latest ${planType} settings, day rules, and smart recipe assignments!`)
-
-              console.log(`Recreated ${planDuration}-day meal plan with latest settings via auto-setup`)
-            } catch (error) {
-              console.error('Error recreating meal plan:', error)
-              Alert.alert('Error', 'Failed to recreate meal planner. Please try again.')
+              console.error('Error refreshing meal plan:', error)
+              Alert.alert('Error', 'Failed to refresh meal plan')
             } finally {
               setIsLoading(false)
             }
@@ -243,45 +202,36 @@ export default function MealPlanScreen() {
           <Paragraph>Loading meal plan...</Paragraph>
         </YStack>
       ) : (
-        <FlatList
-          data={mealPlanItems}
-          renderItem={renderDayItem}
-          keyExtractor={item => item.id.toString()}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={5}
-          windowSize={10}
-          initialNumToRender={7}
-        />
+        <YStack flex={1}>
+          <FlatList
+            data={mealPlanItems}
+            renderItem={renderDayItem}
+            keyExtractor={item => item.id.toString()}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 16 }}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={5}
+            windowSize={10}
+            initialNumToRender={7}
+          />
+
+          {/* Refresh Button at Bottom */}
+          <XStack p="$4" pb="$6" backgroundColor="$background">
+            <Button
+              flex={1}
+              size="$2"
+              icon={RotateCcw}
+              backgroundColor="$blue10"
+              color="white"
+              onPress={handleGenerateNewPlan}
+              disabled={isLoading}
+              fontWeight="600"
+            >
+              Refresh Meal Plan
+            </Button>
+          </XStack>
+        </YStack>
       )}
-
-      {/* Floating Action Buttons */}
-      <YStack position="absolute" bottom="$4" right="$4" gap="$3">
-        {/* Recreate Meal Planner Button */}
-        <Button
-          size="$4"
-          circular
-          icon={RotateCcw}
-          backgroundColor="$blue10"
-          color="white"
-          elevate
-          onPress={handleRecreateMealPlan}
-          disabled={isLoading}
-        />
-
-        {/* Generate New Plan Button */}
-        <Button
-          size="$5"
-          circular
-          icon={Plus}
-          backgroundColor="$green10"
-          color="white"
-          elevate
-          onPress={handleGenerateNewPlan}
-          disabled={isLoading}
-        />
-      </YStack>
     </ScreenLayout>
   )
 }
