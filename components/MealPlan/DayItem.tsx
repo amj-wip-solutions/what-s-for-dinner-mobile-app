@@ -21,24 +21,23 @@ const DayItemTags = ({ tags }: { tags?: any[] }) => {
   if (!tags || tags.length === 0) return null
 
   return (
-    <XStack gap="$2" mt="$2" flexWrap="wrap">
+    <YStack gap="$2" alignItems="flex-end">
       {tags.map((tag) => (
         <XStack
           key={tag.id}
-          backgroundColor="$blue3"
+          backgroundColor="white"
           paddingHorizontal="$2"
-          paddingVertical="$1"
-          borderRadius="$2"
+          paddingVertical="$0.5"
+          borderRadius="$1"
           alignItems="center"
-          gap="$1"
+          gap="$2"
         >
-          <TagIcon size={12} color="$blue10" />
-          <Text fontSize="$2" color="$blue10">
+          <Paragraph fontSize="$3" color="black">
             {tag.name}
-          </Text>
+          </Paragraph>
         </XStack>
       ))}
-    </XStack>
+    </YStack>
   )
 }
 
@@ -52,41 +51,41 @@ export const DayItem = ({ item, onSwap }: DayItemProps) => {
       mx="$2"
     >
       <Card.Header padded>
-        <XStack alignItems="center" justifyContent="space-between">
-          <YStack f={1}>
-            <XStack alignItems="center" gap="$3">
-              {item.recipe?.imageUrl ? (
-                <Image
-                  source={{ uri: item.recipe.imageUrl }}
-                  width={50}
-                  height={50}
-                  borderRadius="$2"
-                />
-              ) : (
-                <YStack
-                  width={50}
-                  height={50}
-                  backgroundColor="$gray5"
-                  borderRadius="$2"
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <Text fontSize="$2" color="$gray10" textAlign="center">
-                    No Recipe
-                  </Text>
-                </YStack>
-              )}
-              <YStack f={1}>
-                <Paragraph fontWeight="600" size="$4">
-                  {item.dayOfWeek}
-                </Paragraph>
-                <Paragraph theme="alt2" size="$3">
-                  {item.recipe?.name || 'No recipe assigned'}
-                </Paragraph>
-                <DayItemTags tags={item.tags} />
+        <XStack alignItems="center" justifyContent="space-between" gap="$3">
+          <XStack alignItems="center" gap="$3" f={1}>
+            {item.recipe?.imageUrl ? (
+              <Image
+                source={{ uri: item.recipe.imageUrl }}
+                width={50}
+                height={50}
+                borderRadius="$2"
+              />
+            ) : (
+              <YStack
+                width={50}
+                height={50}
+                backgroundColor="$gray5"
+                borderRadius="$2"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <Text fontSize="$2" color="$gray10" textAlign="center">
+                  No Recipe
+                </Text>
               </YStack>
-            </XStack>
-          </YStack>
+            )}
+            <YStack f={1}>
+              <Paragraph fontWeight="600" size="$4">
+                {item.dayOfWeek}
+              </Paragraph>
+              <Paragraph color="$color" size="$3">
+                {item.recipe?.name || 'No recipe assigned'}
+              </Paragraph>
+                <DayItemTags tags={item.tags} />
+
+            </YStack>
+          </XStack>
+
 
           <Button
             size="$3"

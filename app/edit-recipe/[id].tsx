@@ -353,15 +353,16 @@ export default function EditRecipeScreen() {
                       <Button
                         key={tag.id}
                         size="$5"
-                        variant={isSelected ? "outlined" : undefined}
-                        chromeless={!isSelected}
+                        variant="outlined"
+                        backgroundColor={isSelected ? "$blue2" : "$background"}
+                        borderColor={isSelected ? "$blue8" : "$borderColor"}
                         onPress={() => toggleTag(tag)}
                         justifyContent="space-between"
-                        iconAfter={isSelected ? <Check size={20} /> : undefined}
+                        iconAfter={isSelected ? <Check size={20} color="$blue10" /> : undefined}
                       >
                         <XStack alignItems="center" gap="$3" flex={1}>
-                          <TagIcon size={20} color={isSelected ? "$blue10" : "$gray10"} />
-                          <Paragraph fontSize="$5" color={isSelected ? "$blue11" : "$gray11"}>
+                          <TagIcon size={20} color={isSelected ? "$blue10" : "$color"} />
+                          <Paragraph fontSize="$5" color={isSelected ? "$blue11" : "$color"}>
                             {tag.name}
                           </Paragraph>
                         </XStack>
