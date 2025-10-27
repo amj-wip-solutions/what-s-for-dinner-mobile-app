@@ -17,23 +17,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-console.log('auth provider rendered', supabase)
+
   useEffect(() => {
     // Only initialize if supabase is available
     if (!supabase) {
+      console.log('Supabase not configured, skipping auth initialization')
       setLoading(false)
       return
     }
 
-    // Get initial session
+    // Get initial session (will restore from AsyncStorage if available)
     const getInitialSession = async () => {
       try {
+        console.log('Checking for existing session...')
+        if (!supabase) return
+
         const { data: { session }, error } = await supabase.auth.getSession()
         if (error) {
           console.error('Error getting session:', error)
-        } else {
+        } else if (session) {
+          console.log('Session restored for user:', session.user.email)
           setSession(session)
-          setUser(session?.user ?? null)
+          setUser(session.user)
+        } else {
+          console.log('No existing session found')
         }
       } catch (error) {
         console.error('Failed to get initial session:', error)
@@ -66,7 +73,7 @@ console.log('auth provider rendered', supabase)
 
     try {
       setLoading(true)
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
@@ -92,7 +99,7 @@ console.log('auth provider rendered', supabase)
 
     try {
       setLoading(true)
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
       })

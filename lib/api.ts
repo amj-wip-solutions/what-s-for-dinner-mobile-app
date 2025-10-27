@@ -1,6 +1,7 @@
 // API client for making authenticated requests
 import axios from 'axios'
 import { createClient } from '@supabase/supabase-js'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 // Initialize Supabase client with proper error handling
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL
@@ -15,8 +16,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase credentials not found in environment variables')
 }
 
+// Create Supabase client with session persistence
 export const supabase = supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey)
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          // Use AsyncStorage to store the user's session
+          storage: AsyncStorage,
+          // Automatically refresh the token
+          autoRefreshToken: true,
+          // Persist the session on the device
+          persistSession: true,
+          // Don't try to detect sessions from the URL (browser-only feature)
+          detectSessionInUrl: false,
+        },
+      })
     : null
 
 
