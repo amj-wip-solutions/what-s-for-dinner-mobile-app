@@ -157,8 +157,12 @@ export default function SettingsScreen() {
                       <Sheet
                         modal
                         dismissOnSnapToBottom
-                        snapPointsMode="percent"
-                        snapPoints={[90]}
+                        snapPointsMode="fit"
+                        animationConfig={{
+                          type: 'spring',
+                          damping: 20,
+                          stiffness: 200,
+                        }}
                       >
                         <Sheet.Frame p="$4" gap="$4" backgroundColor="$background">
                           <Sheet.Handle backgroundColor="$borderColor" />
@@ -176,13 +180,13 @@ export default function SettingsScreen() {
                     <Select.Content zIndex={200000}>
                       <Select.Viewport>
                         <Select.Item index={0} value="7">
-                          <Select.ItemText fontSize="$6" paddingVertical="$3">1 Week (7 days)</Select.ItemText>
+                          <Select.ItemText fontSize="$6" paddingVertical="$4">1 Week (7 days)</Select.ItemText>
                           <Select.ItemIndicator marginLeft="auto">
                             <Check size={20} color="$brand" />
                           </Select.ItemIndicator>
                         </Select.Item>
                         <Select.Item index={1} value="14">
-                          <Select.ItemText fontSize="$6" paddingVertical="$3">2 Weeks (14 days)</Select.ItemText>
+                          <Select.ItemText fontSize="$6" paddingVertical="$4">2 Weeks (14 days)</Select.ItemText>
                           <Select.ItemIndicator marginLeft="auto">
                             <Check size={20} color="$brand" />
                           </Select.ItemIndicator>
@@ -216,8 +220,12 @@ export default function SettingsScreen() {
                       <Sheet
                         modal
                         dismissOnSnapToBottom
-                        snapPointsMode="percent"
-                        snapPoints={[90]}
+                        snapPointsMode="fit"
+                        animationConfig={{
+                          type: 'spring',
+                          damping: 20,
+                          stiffness: 200,
+                        }}
                       >
                         <Sheet.Frame p="$4" gap="$4" backgroundColor="$background">
                           <Sheet.Handle backgroundColor="$borderColor" />
@@ -233,69 +241,73 @@ export default function SettingsScreen() {
                     </Select.Adapt>
 
                     <Select.Content zIndex={200000}>
+                      <Select.ScrollUpButton />
                       <Select.Viewport>
                         <Select.Item index={0} value="1">
-                          <Select.ItemText fontSize="$6" paddingVertical="$3">Monday</Select.ItemText>
+                          <Select.ItemText fontSize="$6" paddingVertical="$4">Monday</Select.ItemText>
                           <Select.ItemIndicator marginLeft="auto">
                             <Check size={20} color="$brand" />
                           </Select.ItemIndicator>
                         </Select.Item>
                         <Select.Item index={1} value="2">
-                          <Select.ItemText fontSize="$6" paddingVertical="$3">Tuesday</Select.ItemText>
+                          <Select.ItemText fontSize="$6" paddingVertical="$4">Tuesday</Select.ItemText>
                           <Select.ItemIndicator marginLeft="auto">
                             <Check size={20} color="$brand" />
                           </Select.ItemIndicator>
                         </Select.Item>
                         <Select.Item index={2} value="3">
-                          <Select.ItemText fontSize="$6" paddingVertical="$3">Wednesday</Select.ItemText>
+                          <Select.ItemText fontSize="$6" paddingVertical="$4">Wednesday</Select.ItemText>
                           <Select.ItemIndicator marginLeft="auto">
                             <Check size={20} color="$brand" />
                           </Select.ItemIndicator>
                         </Select.Item>
                         <Select.Item index={3} value="4">
-                          <Select.ItemText fontSize="$6" paddingVertical="$3">Thursday</Select.ItemText>
+                          <Select.ItemText fontSize="$6" paddingVertical="$4">Thursday</Select.ItemText>
                           <Select.ItemIndicator marginLeft="auto">
                             <Check size={20} color="$brand" />
                           </Select.ItemIndicator>
                         </Select.Item>
                         <Select.Item index={4} value="5">
-                          <Select.ItemText fontSize="$6" paddingVertical="$3">Friday</Select.ItemText>
+                          <Select.ItemText fontSize="$6" paddingVertical="$4">Friday</Select.ItemText>
                           <Select.ItemIndicator marginLeft="auto">
                             <Check size={20} color="$brand" />
                           </Select.ItemIndicator>
                         </Select.Item>
                         <Select.Item index={5} value="6">
-                          <Select.ItemText fontSize="$6" paddingVertical="$3">Saturday</Select.ItemText>
+                          <Select.ItemText fontSize="$6" paddingVertical="$4">Saturday</Select.ItemText>
                           <Select.ItemIndicator marginLeft="auto">
                             <Check size={20} color="$brand" />
                           </Select.ItemIndicator>
                         </Select.Item>
                         <Select.Item index={6} value="7">
-                          <Select.ItemText fontSize="$6" paddingVertical="$3">Sunday</Select.ItemText>
+                          <Select.ItemText fontSize="$6" paddingVertical="$4">Sunday</Select.ItemText>
                           <Select.ItemIndicator marginLeft="auto">
                             <Check size={20} color="$brand" />
                           </Select.ItemIndicator>
                         </Select.Item>
                       </Select.Viewport>
+                      <Select.ScrollDownButton />
                     </Select.Content>
                   </Select>
                 </YStack>
 
                 {/* Auto Create Plans */}
                 <YStack padding="$4">
-                  <XStack justifyContent="space-between" alignItems="center" gap="$3">
-                    <YStack flex={1}>
-                      <Paragraph fontWeight="600" color="$color">Auto-create Plans</Paragraph>
-                      <Paragraph size="$2" color="$gray6">
-                        Automatically create new plans when current expires
-                      </Paragraph>
-                    </YStack>
+                  <YStack gap="$2" marginBottom="$3">
+                    <Paragraph fontWeight="600" color="$color">Auto-create Plans</Paragraph>
+                    <Paragraph size="$2" color="$gray6">
+                      Automatically create new plans when current expires
+                    </Paragraph>
+                  </YStack>
+                  <XStack>
                     <Switch
+                      size="$4"
                       checked={userSettings.autoCreatePlans}
                       onCheckedChange={(checked) => updateSetting('autoCreatePlans', checked)}
                       disabled={saving}
+                      backgroundColor={userSettings.autoCreatePlans ? "$gray5" : "$gray8"}
                     >
-                      <Switch.Thumb animation="bouncy" />
+                      <Switch.Thumb animation="bouncy" backgroundColor="white" />
                     </Switch>
                   </XStack>
                 </YStack>
